@@ -4,8 +4,13 @@ from .views import (
     generate_razorpay_payment_link, download_pdf, send_reminder,
     mark_as_paid, recent_invoices, razorpay_webhook
 )
+from .mongodb_views import (
+    MongoDBInvoiceListCreateView, MongoDBInvoiceDetailView, MongoDBInvoiceSummaryView,
+    mongodb_recent_invoices, mongodb_search_invoices
+)
 
 urlpatterns = [
+    # Original Django ORM views (for backward compatibility)
     path('invoices/', InvoiceListCreateView.as_view(), name='invoice-list-create'),
     path('invoices/<uuid:pk>/', InvoiceDetailView.as_view(), name='invoice-detail'),
     path('invoices/summary/', InvoiceSummaryView.as_view(), name='invoice-summary'),
@@ -15,4 +20,11 @@ urlpatterns = [
     path('invoices/<uuid:invoice_id>/mark-paid/', mark_as_paid, name='mark-as-paid'),
     path('invoices/recent/', recent_invoices, name='recent-invoices'),
     path('webhook/razorpay/', razorpay_webhook, name='razorpay-webhook'),
+    
+    # MongoDB-based views
+    path('mongodb/invoices/', MongoDBInvoiceListCreateView.as_view(), name='mongodb-invoice-list-create'),
+    path('mongodb/invoices/<str:pk>/', MongoDBInvoiceDetailView.as_view(), name='mongodb-invoice-detail'),
+    path('mongodb/invoices/summary/', MongoDBInvoiceSummaryView.as_view(), name='mongodb-invoice-summary'),
+    path('mongodb/invoices/recent/', mongodb_recent_invoices, name='mongodb-recent-invoices'),
+    path('mongodb/invoices/search/', mongodb_search_invoices, name='mongodb-search-invoices'),
 ]

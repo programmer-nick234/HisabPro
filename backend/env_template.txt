@@ -1,0 +1,22 @@
+# Django Settings
+SECRET_KEY=your-secret-key-here
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# MongoDB Atlas Configuration
+MONGODB_URI=mongodb+srv://nikhilbajantri86:NZfz6nbhOhREFy0t@hisabpro.hjtknwz.mongodb.net/?retryWrites=true&w=majority&appName=HisabPro
+
+# CORS Settings
+CORS_ALLOWED_ORIGINS=http://localhost:3000
+
+# Email Settings (SendGrid)
+SENDGRID_API_KEY=your-sendgrid-api-key
+EMAIL_FROM=noreply@hisabpro.com
+
+# Razorpay Settings
+RAZORPAY_KEY_ID=your-razorpay-key-id
+RAZORPAY_KEY_SECRET=your-razorpay-key-secret
+RAZORPAY_WEBHOOK_SECRET=your-razorpay-webhook-secret
+
+# Redis Settings
+REDIS_URL=redis://localhost:6379/0
