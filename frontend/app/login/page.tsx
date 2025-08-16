@@ -8,6 +8,9 @@ import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthProvider } from '@/hooks/useAuth';
 
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
+
 interface LoginForm {
   username: string;
   password: string;

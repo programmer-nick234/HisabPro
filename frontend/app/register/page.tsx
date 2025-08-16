@@ -9,6 +9,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { AuthProvider } from '@/hooks/useAuth';
 import { validateEmail, validatePhone } from '@/lib/utils';
 
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
+
 interface RegisterForm {
   username: string;
   email: string;
@@ -39,12 +42,28 @@ function RegisterPage() {
   const password = watch('password');
 
   const onSubmit = async (data: RegisterForm) => {
+    console.log('Registration data:', data);
     setIsLoading(true);
-    const success = await registerUser(data);
-    setIsLoading(false);
-    
-    if (success) {
-      router.push('/dashboard');
+    try {
+      console.log('Calling registerUser function...');
+      const success = await registerUser(data);
+      console.log('Registration result:', success);
+      setIsLoading(false);
+      
+      if (success) {
+        console.log('Registration successful, redirecting to dashboard...');
+        router.push('/dashboard');
+      } else {
+        console.log('Registration failed');
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      setIsLoading(false);
     }
   };
 

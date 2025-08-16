@@ -15,19 +15,35 @@ class MongoDBService:
     def __init__(self):
         self.client = None
         self.db = None
-        self.connect()
+        self._connected = False
     
     def connect(self):
         """Connect to MongoDB Atlas"""
+        if self._connected:
+            return
+            
         try:
+            if not settings.MONGODB_URI:
+                logger.warning("MONGODB_URI not configured. MongoDB features will be disabled.")
+                return
+                
             self.client = pymongo.MongoClient(settings.MONGODB_URI)
             self.db = self.client[settings.MONGODB_DATABASE]
             # Test the connection
             self.client.admin.command('ping')
+            self._connected = True
             logger.info("Successfully connected to MongoDB Atlas")
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {str(e)}")
-            raise
+            self._connected = False
+            # Don't raise the exception, just log it
+            logger.warning("MongoDB connection failed. Application will continue without MongoDB features.")
+    
+    def _ensure_connected(self):
+        """Ensure MongoDB is connected before operations"""
+        if not self._connected:
+            self.connect()
+        return self._connected
     
     def close(self):
         """Close MongoDB connection"""
@@ -37,6 +53,9 @@ class MongoDBService:
     # User Profile Operations
     def create_user_profile(self, user_id, profile_data):
         """Create a new user profile in MongoDB"""
+        if not self._ensure_connected():
+            return None
+            
         try:
             profile_data['user_id'] = user_id
             profile_data['created_at'] = datetime.utcnow()
@@ -50,6 +69,9 @@ class MongoDBService:
     
     def get_user_profile(self, user_id):
         """Get user profile by user_id"""
+        if not self._ensure_connected():
+            return None
+            
         try:
             profile = self.db.user_profiles.find_one({'user_id': user_id})
             if profile:
@@ -61,6 +83,9 @@ class MongoDBService:
     
     def update_user_profile(self, user_id, profile_data):
         """Update user profile"""
+        if not self._ensure_connected():
+            return False
+            
         try:
             profile_data['updated_at'] = datetime.utcnow()
             result = self.db.user_profiles.update_one(
@@ -75,6 +100,9 @@ class MongoDBService:
     # Invoice Operations
     def create_invoice(self, invoice_data):
         """Create a new invoice in MongoDB"""
+        if not self._ensure_connected():
+            return None
+            
         try:
             invoice_data['created_at'] = datetime.utcnow()
             invoice_data['updated_at'] = datetime.utcnow()
@@ -87,6 +115,9 @@ class MongoDBService:
     
     def get_invoice(self, invoice_id):
         """Get invoice by ID"""
+        if not self._ensure_connected():
+            return None
+            
         try:
             invoice = self.db.invoices.find_one({'_id': ObjectId(invoice_id)})
             if invoice:
@@ -98,6 +129,9 @@ class MongoDBService:
     
     def get_user_invoices(self, user_id, limit=20, skip=0):
         """Get invoices for a specific user"""
+        if not self._ensure_connected():
+            return []
+            
         try:
             cursor = self.db.invoices.find(
                 {'user_id': user_id}
@@ -115,6 +149,9 @@ class MongoDBService:
     
     def update_invoice(self, invoice_id, invoice_data):
         """Update invoice"""
+        if not self._ensure_connected():
+            return False
+            
         try:
             invoice_data['updated_at'] = datetime.utcnow()
             result = self.db.invoices.update_one(
@@ -128,6 +165,9 @@ class MongoDBService:
     
     def delete_invoice(self, invoice_id):
         """Delete invoice"""
+        if not self._ensure_connected():
+            return False
+            
         try:
             result = self.db.invoices.delete_one({'_id': ObjectId(invoice_id)})
             return result.deleted_count > 0
@@ -138,6 +178,9 @@ class MongoDBService:
     # Invoice Item Operations
     def create_invoice_item(self, item_data):
         """Create a new invoice item"""
+        if not self._ensure_connected():
+            return None
+            
         try:
             result = self.db.invoice_items.insert_one(item_data)
             return str(result.inserted_id)
@@ -147,6 +190,9 @@ class MongoDBService:
     
     def get_invoice_items(self, invoice_id):
         """Get all items for an invoice"""
+        if not self._ensure_connected():
+            return []
+            
         try:
             cursor = self.db.invoice_items.find({'invoice_id': invoice_id})
             items = []
@@ -160,6 +206,9 @@ class MongoDBService:
     
     def update_invoice_item(self, item_id, item_data):
         """Update invoice item"""
+        if not self._ensure_connected():
+            return False
+            
         try:
             result = self.db.invoice_items.update_one(
                 {'_id': ObjectId(item_id)},
@@ -172,6 +221,9 @@ class MongoDBService:
     
     def delete_invoice_item(self, item_id):
         """Delete invoice item"""
+        if not self._ensure_connected():
+            return False
+            
         try:
             result = self.db.invoice_items.delete_one({'_id': ObjectId(item_id)})
             return result.deleted_count > 0
@@ -182,6 +234,9 @@ class MongoDBService:
     # Payment Operations
     def create_payment(self, payment_data):
         """Create a new payment"""
+        if not self._ensure_connected():
+            return None
+            
         try:
             payment_data['payment_date'] = datetime.utcnow()
             result = self.db.payments.insert_one(payment_data)
@@ -192,6 +247,9 @@ class MongoDBService:
     
     def get_invoice_payments(self, invoice_id):
         """Get all payments for an invoice"""
+        if not self._ensure_connected():
+            return []
+            
         try:
             cursor = self.db.payments.find({'invoice_id': invoice_id})
             payments = []
@@ -206,6 +264,9 @@ class MongoDBService:
     # Utility Methods
     def get_invoice_count(self, user_id):
         """Get total invoice count for a user"""
+        if not self._ensure_connected():
+            return 0
+            
         try:
             return self.db.invoices.count_documents({'user_id': user_id})
         except Exception as e:
@@ -214,6 +275,9 @@ class MongoDBService:
     
     def search_invoices(self, user_id, query, limit=20):
         """Search invoices by client name or invoice number"""
+        if not self._ensure_connected():
+            return []
+            
         try:
             cursor = self.db.invoices.find({
                 'user_id': user_id,

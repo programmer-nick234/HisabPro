@@ -4,7 +4,8 @@ DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 
 # MongoDB Atlas Configuration
-MONGODB_URI=mongodb+srv://nikhilbajantri86:NZfz6nbhOhREFy0t@hisabpro.hjtknwz.mongodb.net/?retryWrites=true&w=majority&appName=HisabPro
+# Replace with your actual MongoDB Atlas connection string
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=true&w=majority
 
 # CORS Settings
 CORS_ALLOWED_ORIGINS=http://localhost:3000

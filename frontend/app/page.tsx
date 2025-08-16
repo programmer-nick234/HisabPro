@@ -2,38 +2,28 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
-import { AuthProvider } from '@/hooks/useAuth';
 
-function HomePage() {
-  const { user, loading } = useAuth();
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
+
+export default function Page() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading) {
-      if (user) {
+    // Check if user is logged in
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token');
+      if (token) {
         router.push('/dashboard');
       } else {
         router.push('/login');
       }
     }
-  }, [user, loading, router]);
+  }, [router]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
-
-  return null;
-}
-
-export default function Page() {
   return (
-    <AuthProvider>
-      <HomePage />
-    </AuthProvider>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+    </div>
   );
 }

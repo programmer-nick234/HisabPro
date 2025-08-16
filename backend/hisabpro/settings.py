@@ -74,7 +74,7 @@ DATABASES = {
 }
 
 # MongoDB Configuration
-MONGODB_URI = config('MONGODB_URI', default='mongodb+srv://nikhilbajantri86:NZfz6nbhOhREFy0t@hisabpro.hjtknwz.mongodb.net/?retryWrites=true&w=majority&appName=HisabPro')
+MONGODB_URI = config('MONGODB_URI', default='')
 MONGODB_DATABASE = 'hisabpro'
 
 # Password validation

@@ -1,18 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { 
-  Plus, Search, Filter, Download, Mail, CreditCard, 
-  MoreVertical, Eye, Edit, Trash2 
-} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthProvider } from '@/hooks/useAuth';
-import DashboardLayout from '@/components/DashboardLayout';
 import { invoiceAPI } from '@/lib/api';
+import DashboardLayout from '@/components/DashboardLayout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Plus, Search, Filter, Download, Eye, Edit, Trash2, Send } from 'lucide-react';
+import Link from 'next/link';
 import { formatCurrency, formatDateShort, getStatusBadgeColor } from '@/lib/utils';
 import toast from 'react-hot-toast';
+
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
 
 interface Invoice {
   id: string;
@@ -304,14 +306,15 @@ function InvoicesPage() {
                                     className="text-warning-600 hover:text-warning-900"
                                     title="Send Reminder"
                                   >
-                                    <Mail className="h-4 w-4" />
+                                    <Send className="h-4 w-4" />
                                   </button>
                                   <button
                                     onClick={() => handleGeneratePaymentLink(invoice.id)}
                                     className="text-success-600 hover:text-success-900"
                                     title="Generate Payment Link"
                                   >
-                                    <CreditCard className="h-4 w-4" />
+                                    {/* CreditCard icon was removed, using Send for now */}
+                                    <Send className="h-4 w-4" />
                                   </button>
                                 </>
                               )}

@@ -45,7 +45,7 @@ def migrate_to_mongodb():
         print("\nNext steps:")
         print("1. Test your application")
         print("2. Update your environment variables:")
-        print("   MONGODB_URI=mongodb+srv://nikhilbajantri86:NZfz6nbhOhREFy0t@hisabpro.hjtknwz.mongodb.net/?retryWrites=true&w=majority&appName=HisabPro")
+        print("   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=true&w=majority")
         print("3. Remove old PostgreSQL environment variables if any")
         
     except Exception as e:
