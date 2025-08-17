@@ -1,0 +1,22 @@
+{
+    "include": [
+        "."
+    ],
+    "exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        "**/migrations",
+        "venv"
+    ],
+    "pythonPath": "./venv/Scripts/python.exe",
+    "pythonVersion": "3.12",
+    "typeCheckingMode": "basic",
+    "useLibraryCodeForTypes": true,
+    "extraPaths": [
+        ".",
+        "./venv/Lib/site-packages"
+    ],
+    "env": {
+        "DJANGO_SETTINGS_MODULE": "hisabpro.settings"
+    }
+}

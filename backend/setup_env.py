@@ -29,7 +29,7 @@ def setup_env():
         print("\n📝 Next steps:")
         print("1. Edit .env file with your actual credentials:")
         print("   - Replace MONGODB_URI with your MongoDB Atlas connection string")
-        print("   - Add your SendGrid API key")
+        print("   - Update Gmail SMTP credentials (EMAIL_HOST_USER, EMAIL_HOST_PASSWORD)")
         print("   - Add your Razorpay credentials")
         print("   - Update SECRET_KEY with a secure random string")
         print("\n2. Never commit .env file to version control!")

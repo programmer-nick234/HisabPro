@@ -27,9 +27,15 @@ class MongoDBService:
                 logger.warning("MONGODB_URI not configured. MongoDB features will be disabled.")
                 return
                 
-            self.client = pymongo.MongoClient(settings.MONGODB_URI)
+            # Connect to local MongoDB
+            self.client = pymongo.MongoClient(
+                settings.MONGODB_URI,
+                serverSelectionTimeoutMS=5000,
+                connectTimeoutMS=5000,
+                socketTimeoutMS=5000
+            )
             self.db = self.client[settings.MONGODB_DATABASE]
-            # Test the connection
+            # Test the connection with timeout
             self.client.admin.command('ping')
             self._connected = True
             logger.info("Successfully connected to MongoDB Atlas")
@@ -42,7 +48,11 @@ class MongoDBService:
     def _ensure_connected(self):
         """Ensure MongoDB is connected before operations"""
         if not self._connected:
-            self.connect()
+            try:
+                self.connect()
+            except Exception as e:
+                logger.error(f"Failed to ensure MongoDB connection: {str(e)}")
+                return False
         return self._connected
     
     def close(self):

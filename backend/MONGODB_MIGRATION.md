@@ -33,9 +33,13 @@ MONGODB_URI=mongodb+srv://nikhilbajantri86:NZfz6nbhOhREFy0t@hisabpro.hjtknwz.mon
 # CORS Settings
 CORS_ALLOWED_ORIGINS=http://localhost:3000
 
-# Email Settings (SendGrid)
-SENDGRID_API_KEY=your-sendgrid-api-key
-EMAIL_FROM=noreply@hisabpro.com
+# Email Settings (Gmail SMTP)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=your-gmail@gmail.com
+EMAIL_HOST_PASSWORD=your-gmail-app-password
+EMAIL_USE_TLS=True
+DEFAULT_FROM_EMAIL=your-gmail@gmail.com
 
 # Razorpay Settings
 RAZORPAY_KEY_ID=your-razorpay-key-id

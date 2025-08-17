@@ -30,6 +30,14 @@ interface Invoice {
 }
 
 function InvoicesPage() {
+  return (
+    <AuthProvider>
+      <InvoicesContent />
+    </AuthProvider>
+  );
+}
+
+function InvoicesContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -123,13 +131,11 @@ function InvoicesPage() {
 
   if (loading || isLoading) {
     return (
-      <AuthProvider>
-        <DashboardLayout>
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-          </div>
-        </DashboardLayout>
-      </AuthProvider>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -138,8 +144,7 @@ function InvoicesPage() {
   }
 
   return (
-    <AuthProvider>
-      <DashboardLayout>
+    <DashboardLayout>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -337,7 +342,6 @@ function InvoicesPage() {
           </div>
         </div>
       </DashboardLayout>
-    </AuthProvider>
   );
 }
 

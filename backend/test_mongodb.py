@@ -21,6 +21,13 @@ def test_mongodb_connection():
     try:
         print("Testing MongoDB Atlas connection...")
         
+        # Ensure connection is established
+        mongodb_service.connect()
+        
+        if not mongodb_service._connected:
+            print("✗ Failed to connect to MongoDB Atlas")
+            return False
+        
         # Test basic connection
         mongodb_service.client.admin.command('ping')
         print("✓ Successfully connected to MongoDB Atlas")

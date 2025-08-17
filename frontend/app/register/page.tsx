@@ -26,6 +26,14 @@ interface RegisterForm {
 }
 
 function RegisterPage() {
+  return (
+    <AuthProvider>
+      <RegisterContent />
+    </AuthProvider>
+  );
+}
+
+function RegisterContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [showPassword2, setShowPassword2] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

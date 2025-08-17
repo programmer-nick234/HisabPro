@@ -1,0 +1,5 @@
+HisabPro Performance Report
+==================================================
+Generated: 2025-08-17T15:06:06.210850
+
+System Performance: 

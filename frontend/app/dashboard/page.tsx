@@ -38,6 +38,14 @@ interface Invoice {
 }
 
 function DashboardPage() {
+  return (
+    <AuthProvider>
+      <DashboardContent />
+    </AuthProvider>
+  );
+}
+
+function DashboardContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [summary, setSummary] = useState<InvoiceSummary | null>(null);
@@ -57,15 +65,70 @@ function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
-      const [summaryResponse, recentResponse] = await Promise.all([
-        invoiceAPI.getSummary(),
-        invoiceAPI.getRecent()
-      ]);
+      console.log('Loading dashboard data...');
       
-      setSummary(summaryResponse.data);
-      setRecentInvoices(recentResponse.data);
+      // Load summary data
+      const summaryResponse = await invoiceAPI.getSummary();
+      console.log('Summary response:', summaryResponse);
+      
+      // Handle summary data - it might be a single object or have a different structure
+      let summaryData = summaryResponse.data;
+      if (summaryData && typeof summaryData === 'object') {
+        // If it's a single invoice object, create a summary from it
+        if (summaryData.invoice_number) {
+          summaryData = {
+            total_invoices: 1,
+            pending_invoices: summaryData.status === 'pending' ? 1 : 0,
+            paid_invoices: summaryData.status === 'paid' ? 1 : 0,
+            overdue_invoices: summaryData.status === 'overdue' ? 1 : 0,
+            total_pending_amount: summaryData.status === 'pending' ? (summaryData.total_amount || 0) : 0,
+            total_paid_amount: summaryData.status === 'paid' ? (summaryData.total_amount || 0) : 0,
+            total_overdue_amount: summaryData.status === 'overdue' ? (summaryData.total_amount || 0) : 0,
+            total_amount: summaryData.total_amount || 0
+          };
+        }
+      }
+      setSummary(summaryData);
+      
+      // Load recent invoices data
+      const recentResponse = await invoiceAPI.getRecent();
+      console.log('Recent response:', recentResponse);
+      
+      // Handle recent invoices data - it might be a single object or an array
+      let recentData = recentResponse.data;
+      if (recentData && typeof recentData === 'object') {
+        // If it's a single invoice object, wrap it in an array
+        if (recentData.invoice_number) {
+          recentData = [recentData];
+        }
+        // If it's not an array, try to get the results property
+        else if (!Array.isArray(recentData) && recentData.results) {
+          recentData = recentData.results;
+        }
+        // If it's still not an array, make it an empty array
+        else if (!Array.isArray(recentData)) {
+          recentData = [];
+        }
+      } else {
+        recentData = [];
+      }
+      setRecentInvoices(recentData);
+      
     } catch (error) {
+      console.error('Dashboard data error:', error);
       toast.error('Failed to load dashboard data');
+      // Set default values
+      setSummary({
+        total_invoices: 0,
+        pending_invoices: 0,
+        paid_invoices: 0,
+        overdue_invoices: 0,
+        total_pending_amount: 0,
+        total_paid_amount: 0,
+        total_overdue_amount: 0,
+        total_amount: 0
+      });
+      setRecentInvoices([]);
     } finally {
       setIsLoading(false);
     }
@@ -73,13 +136,11 @@ function DashboardPage() {
 
   if (loading || isLoading) {
     return (
-      <AuthProvider>
-        <DashboardLayout>
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-          </div>
-        </DashboardLayout>
-      </AuthProvider>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -99,223 +160,221 @@ function DashboardPage() {
       title: 'Pending Amount',
       value: formatCurrency(summary?.total_pending_amount || 0),
       icon: Clock,
-      color: 'text-warning-600',
-      bgColor: 'bg-warning-50',
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-50',
     },
     {
       title: 'Paid Amount',
       value: formatCurrency(summary?.total_paid_amount || 0),
       icon: CheckCircle,
-      color: 'text-success-600',
-      bgColor: 'bg-success-50',
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
     },
     {
       title: 'Overdue Amount',
       value: formatCurrency(summary?.total_overdue_amount || 0),
       icon: AlertTriangle,
-      color: 'text-danger-600',
-      bgColor: 'bg-danger-50',
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
     },
   ];
 
   return (
-    <AuthProvider>
-      <DashboardLayout>
-        <div className="space-y-6">
-          {/* Welcome Section */}
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Welcome back, {user.first_name}!
-            </h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Here's what's happening with your invoices today.
-            </p>
-          </div>
-
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {summaryCards.map((card) => (
-              <div key={card.title} className="card">
-                <div className="card-content">
-                  <div className="flex items-center">
-                    <div className={`flex-shrink-0 ${card.bgColor} rounded-md p-3`}>
-                      <card.icon className={`h-6 w-6 ${card.color}`} />
-                    </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">
-                          {card.title}
-                        </dt>
-                        <dd className="text-lg font-medium text-gray-900">
-                          {card.value}
-                        </dd>
-                      </dl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">Quick Actions</h3>
-            </div>
-            <div className="card-content">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <Link
-                  href="/invoices/create"
-                  className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary-500 rounded-lg border border-gray-200 hover:border-primary-300 transition-colors"
-                >
-                  <div>
-                    <span className="rounded-lg inline-flex p-3 bg-primary-50 text-primary-700 ring-4 ring-white">
-                      <Plus className="h-6 w-6" />
-                    </span>
-                  </div>
-                  <div className="mt-8">
-                    <h3 className="text-lg font-medium">
-                      <span className="absolute inset-0" aria-hidden="true" />
-                      Create Invoice
-                    </h3>
-                    <p className="mt-2 text-sm text-gray-500">
-                      Generate a new invoice for your client
-                    </p>
-                  </div>
-                </Link>
-
-                <Link
-                  href="/invoices"
-                  className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary-500 rounded-lg border border-gray-200 hover:border-primary-300 transition-colors"
-                >
-                  <div>
-                    <span className="rounded-lg inline-flex p-3 bg-warning-50 text-warning-700 ring-4 ring-white">
-                      <FileText className="h-6 w-6" />
-                    </span>
-                  </div>
-                  <div className="mt-8">
-                    <h3 className="text-lg font-medium">
-                      <span className="absolute inset-0" aria-hidden="true" />
-                      View All Invoices
-                    </h3>
-                    <p className="mt-2 text-sm text-gray-500">
-                      Manage and track all your invoices
-                    </p>
-                  </div>
-                </Link>
-
-                <Link
-                  href="/analytics"
-                  className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary-500 rounded-lg border border-gray-200 hover:border-primary-300 transition-colors"
-                >
-                  <div>
-                    <span className="rounded-lg inline-flex p-3 bg-success-50 text-success-700 ring-4 ring-white">
-                      <TrendingUp className="h-6 w-6" />
-                    </span>
-                  </div>
-                  <div className="mt-8">
-                    <h3 className="text-lg font-medium">
-                      <span className="absolute inset-0" aria-hidden="true" />
-                      View Analytics
-                    </h3>
-                    <p className="mt-2 text-sm text-gray-500">
-                      Analyze your business performance
-                    </p>
-                  </div>
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Invoices */}
-          <div className="card">
-            <div className="card-header">
-              <div className="flex items-center justify-between">
-                <h3 className="card-title">Recent Invoices</h3>
-                <Link
-                  href="/invoices"
-                  className="text-sm font-medium text-primary-600 hover:text-primary-500"
-                >
-                  View all
-                </Link>
-              </div>
-            </div>
-            <div className="card-content">
-              {recentInvoices.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No invoices</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Get started by creating your first invoice.
-                  </p>
-                  <div className="mt-6">
-                    <Link
-                      href="/invoices/create"
-                      className="btn btn-primary"
-                    >
-                      <Plus className="-ml-1 mr-2 h-5 w-5" />
-                      Create Invoice
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <div className="overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Invoice
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Client
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Amount
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Due Date
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {recentInvoices.map((invoice) => (
-                        <tr key={invoice.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Link
-                              href={`/invoices/${invoice.id}`}
-                              className="text-sm font-medium text-primary-600 hover:text-primary-500"
-                            >
-                              {invoice.invoice_number}
-                            </Link>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {invoice.client_name}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatCurrency(invoice.total_amount)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(invoice.status)}`}>
-                              {invoice.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatDateShort(invoice.due_date)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Welcome Section */}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome back, {user.first_name || user.username}!
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Here's what's happening with your invoices today.
+          </p>
         </div>
-      </DashboardLayout>
-    </AuthProvider>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {summaryCards.map((card) => (
+            <Card key={card.title} className="overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className={`flex-shrink-0 ${card.bgColor} rounded-md p-3`}>
+                    <card.icon className={`h-6 w-6 ${card.color}`} />
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">
+                        {card.title}
+                      </dt>
+                      <dd className="text-lg font-medium text-gray-900">
+                        {card.value}
+                      </dd>
+                    </dl>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Link
+                href="/invoices/create"
+                className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary-500 rounded-lg border border-gray-200 hover:border-primary-300 transition-colors"
+              >
+                <div>
+                  <span className="rounded-lg inline-flex p-3 bg-primary-50 text-primary-700 ring-4 ring-white">
+                    <Plus className="h-6 w-6" />
+                  </span>
+                </div>
+                <div className="mt-8">
+                  <h3 className="text-lg font-medium">
+                    <span className="absolute inset-0" aria-hidden="true" />
+                    Create Invoice
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Generate a new invoice for your client
+                  </p>
+                </div>
+              </Link>
+
+              <Link
+                href="/invoices"
+                className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary-500 rounded-lg border border-gray-200 hover:border-primary-300 transition-colors"
+              >
+                <div>
+                  <span className="rounded-lg inline-flex p-3 bg-yellow-50 text-yellow-700 ring-4 ring-white">
+                    <FileText className="h-6 w-6" />
+                  </span>
+                </div>
+                <div className="mt-8">
+                  <h3 className="text-lg font-medium">
+                    <span className="absolute inset-0" aria-hidden="true" />
+                    View All Invoices
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Manage and track all your invoices
+                  </p>
+                </div>
+              </Link>
+
+              <Link
+                href="/analytics"
+                className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary-500 rounded-lg border border-gray-200 hover:border-primary-300 transition-colors"
+              >
+                <div>
+                  <span className="rounded-lg inline-flex p-3 bg-green-50 text-green-700 ring-4 ring-white">
+                    <TrendingUp className="h-6 w-6" />
+                  </span>
+                </div>
+                <div className="mt-8">
+                  <h3 className="text-lg font-medium">
+                    <span className="absolute inset-0" aria-hidden="true" />
+                    View Analytics
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Analyze your business performance
+                  </p>
+                </div>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Invoices */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Recent Invoices</CardTitle>
+              <Link
+                href="/invoices"
+                className="text-sm font-medium text-primary-600 hover:text-primary-500"
+              >
+                View all
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {!Array.isArray(recentInvoices) || recentInvoices.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No invoices</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Get started by creating your first invoice.
+                </p>
+                <div className="mt-6">
+                  <Link
+                    href="/invoices/create"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    <Plus className="-ml-1 mr-2 h-5 w-5" />
+                    Create Invoice
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Invoice
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Client
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Amount
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Due Date
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {recentInvoices.map((invoice) => (
+                      <tr key={invoice.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Link
+                            href={`/invoices/${invoice.id}`}
+                            className="text-sm font-medium text-primary-600 hover:text-primary-500"
+                          >
+                            {invoice.invoice_number}
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {invoice.client_name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {formatCurrency(invoice.total_amount)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(invoice.status)}`}>
+                            {invoice.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDateShort(invoice.due_date)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
   );
 }
 
