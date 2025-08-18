@@ -73,9 +73,9 @@ DATABASES = {
     }
 }
 
-# MongoDB Configuration
-MONGODB_URI = config('MONGODB_URI', default='')
-MONGODB_DATABASE = 'hisabpro'
+# Supabase Configuration
+SUPABASE_URL = config('SUPABASE_URL', default='')
+SUPABASE_KEY = config('SUPABASE_KEY', default='')
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

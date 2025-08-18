@@ -75,19 +75,19 @@ export const authAPI = {
   changePassword: (data: any) => api.post('/auth/change-password/', data),
 };
 
-// Invoice API (MongoDB - Real-time)
+// Invoice API (Supabase - Real-time)
 export const invoiceAPI = {
-  getInvoices: (params?: any) => api.get('/mongodb/invoices/', { params }),
-  getInvoice: (id: string) => api.get(`/mongodb/invoices/${id}/`),
-  createInvoice: (data: any) => api.post('/mongodb/invoices/', data),
-  updateInvoice: (id: string, data: any) => api.put(`/mongodb/invoices/${id}/`, data),
-  deleteInvoice: (id: string) => api.delete(`/mongodb/invoices/${id}/`),
-  getSummary: () => api.get('/mongodb/invoices/summary/'),
-  getRecent: () => api.get('/mongodb/invoices/recent/'),
-  generatePaymentLink: (id: string) => api.post(`/mongodb/invoices/${id}/payment-link/`),
-  downloadPDF: (id: string) => api.get(`/mongodb/invoices/${id}/pdf/`, { responseType: 'blob' }),
+  getInvoices: (params?: any) => api.get('/supabase/invoices/', { params }),
+  getInvoice: (id: string) => api.get(`/supabase/invoices/${id}/`),
+  createInvoice: (data: any) => api.post('/supabase/invoices/', data),
+  updateInvoice: (id: string, data: any) => api.put(`/supabase/invoices/${id}/`, data),
+  deleteInvoice: (id: string) => api.delete(`/supabase/invoices/${id}/`),
+  getSummary: () => api.get('/supabase/invoices/summary/'),
+  getRecent: () => api.get('/supabase/invoices/recent/'),
+  generatePaymentLink: (id: string) => api.post(`/supabase/invoices/${id}/payment-link/`),
+  downloadPDF: (id: string) => api.get(`/supabase/invoices/${id}/pdf/`, { responseType: 'blob' }),
   sendReminder: (id: string, data?: any) => api.post(`/invoices/${id}/send-reminder/`, data),
-  markAsPaid: (id: string) => api.post(`/mongodb/invoices/${id}/mark-paid/`),
+  markAsPaid: (id: string) => api.post(`/supabase/invoices/${id}/mark-paid/`),
 };
 
 export default api;

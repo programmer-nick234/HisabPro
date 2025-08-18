@@ -4,9 +4,14 @@ from .views import (
     generate_razorpay_payment_link, download_pdf, send_reminder,
     mark_as_paid, recent_invoices, razorpay_webhook
 )
-from .mongodb_views_v2 import (
-    MongoDBInvoiceListCreateView, MongoDBInvoiceDetailView, MongoDBInvoiceSummaryView,
-    mongodb_recent_invoices, mark_invoice_as_paid, download_pdf, generate_payment_link, razorpay_webhook
+from .supabase_views import (
+    SupabaseInvoiceListCreateView,
+    SupabaseInvoiceDetailView,
+    supabase_invoice_summary,
+    supabase_recent_invoices,
+    mark_invoice_as_paid,
+    download_invoice_pdf,
+    generate_payment_link
 )
 
 urlpatterns = [
@@ -21,13 +26,12 @@ urlpatterns = [
     path('invoices/recent/', recent_invoices, name='recent-invoices'),
     path('webhook/razorpay/', razorpay_webhook, name='razorpay-webhook'),
     
-    # MongoDB-based views (Real-time)
-    path('mongodb/invoices/', MongoDBInvoiceListCreateView.as_view(), name='mongodb-invoice-list-create'),
-    path('mongodb/invoices/<str:pk>/', MongoDBInvoiceDetailView.as_view(), name='mongodb-invoice-detail'),
-    path('mongodb/invoices/summary/', MongoDBInvoiceSummaryView.as_view(), name='mongodb-invoice-summary'),
-    path('mongodb/invoices/recent/', mongodb_recent_invoices, name='mongodb-recent-invoices'),
-    path('mongodb/invoices/<str:invoice_id>/mark-paid/', mark_invoice_as_paid, name='mongodb-mark-invoice-paid'),
-    path('mongodb/invoices/<str:invoice_id>/pdf/', download_pdf, name='mongodb-download-pdf'),
-            path('mongodb/invoices/<str:invoice_id>/payment-link/', generate_payment_link, name='mongodb-generate-payment-link'),
-    path('mongodb/webhook/razorpay/', razorpay_webhook, name='mongodb-razorpay-webhook'),
+    # Supabase-based views (Real-time)
+    path('supabase/invoices/', SupabaseInvoiceListCreateView.as_view(), name='supabase-invoice-list-create'),
+    path('supabase/invoices/<str:pk>/', SupabaseInvoiceDetailView.as_view(), name='supabase-invoice-detail'),
+    path('supabase/invoices/summary/', supabase_invoice_summary, name='supabase-invoice-summary'),
+    path('supabase/invoices/recent/', supabase_recent_invoices, name='supabase-recent-invoices'),
+    path('supabase/invoices/<str:invoice_id>/mark-paid/', mark_invoice_as_paid, name='supabase-mark-invoice-paid'),
+    path('supabase/invoices/<str:invoice_id>/pdf/', download_invoice_pdf, name='supabase-download-pdf'),
+    path('supabase/invoices/<str:invoice_id>/payment-link/', generate_payment_link, name='supabase-generate-payment-link'),
 ]
