@@ -26,7 +26,9 @@ interface Invoice {
   issue_date: string;
   due_date: string;
   created_at: string;
-  razorpay_payment_link?: string;
+  payment_link?: string;
+  payment_gateway?: string;
+  payment_id?: string;
 }
 
 function InvoicesPage() {
@@ -110,7 +112,7 @@ function InvoicesContent() {
 
   const handleGeneratePaymentLink = async (invoiceId: string) => {
     try {
-      const response = await invoiceAPI.generateRazorpayLink(invoiceId);
+      const response = await invoiceAPI.generatePaymentLink(invoiceId);
       window.open(response.data.payment_link, '_blank');
       toast.success('Payment link generated successfully');
     } catch (error) {

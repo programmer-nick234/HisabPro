@@ -39,8 +39,8 @@ from .mongodb_serializers import (
 )
 from lib.mongodb import mongodb_service
 
-# Configure Razorpay
-razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+# Import optimized payment system
+from .optimized_payment import payment_system
 
 logger = logging.getLogger(__name__)
 
@@ -683,8 +683,8 @@ def download_pdf(request, invoice_id):
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
-def generate_razorpay_payment_link(request, invoice_id):
-    """Generate Razorpay payment link for MongoDB invoice"""
+def generate_payment_link(request, invoice_id):
+    """Generate optimized payment link for MongoDB invoice"""
     try:
         # Ensure MongoDB connection
         if not ensure_mongodb_connection():
@@ -710,55 +710,46 @@ def generate_razorpay_payment_link(request, invoice_id):
             )
         
         # Check if payment link already exists
-        if hasattr(invoice, 'razorpay_payment_link') and invoice.razorpay_payment_link:
+        if hasattr(invoice, 'payment_link') and invoice.payment_link:
             return Response({
-                'payment_link': invoice.razorpay_payment_link,
-                'order_id': getattr(invoice, 'razorpay_order_id', ''),
+                'payment_link': invoice.payment_link,
+                'gateway': getattr(invoice, 'payment_gateway', 'razorpay'),
                 'message': 'Payment link already exists'
             })
         
         try:
-            # Create Razorpay order
-            order_data = {
-                'amount': int(float(invoice.total_amount) * 100),  # Convert to paise
-                'currency': 'INR',
-                'receipt': f'invoice_{invoice.invoice_number}',
-                'notes': {
-                    'invoice_number': invoice.invoice_number,
-                    'client_name': invoice.client_name,
-                }
-            }
+            # Create payment link using optimized system
+            result = payment_system.create_payment_link(
+                invoice_id=str(invoice._id),
+                amount=invoice.total_amount,
+                currency='INR',
+                description=f'Payment for Invoice #{invoice.invoice_number}',
+                customer_email=invoice.client_email
+            )
             
-            order = razorpay_client.order.create(data=order_data)
-            
-            # Create payment link
-            payment_link_data = {
-                'amount': int(float(invoice.total_amount) * 100),
-                'currency': 'INR',
-                'accept_partial': False,
-                'reference_id': f'invoice_{invoice.invoice_number}',
-                'description': f'Payment for Invoice #{invoice.invoice_number}',
-                'callback_url': f'{getattr(settings, "FRONTEND_URL", "http://localhost:3000")}/payment-success',
-                'callback_method': 'get',
-            }
-            
-            payment_link = razorpay_client.payment_link.create(data=payment_link_data)
-            
-            # Update invoice with payment link and order ID
-            invoice.razorpay_payment_link = payment_link['short_url']
-            invoice.razorpay_order_id = order['id']
-            invoice.save()
-            
-            # Invalidate cache
-            invalidate_user_cache(request.user.id)
-            
-            return Response({
-                'payment_link': payment_link['short_url'],
-                'order_id': order['id']
-            })
+            if result['success']:
+                # Update invoice with payment link
+                invoice.payment_link = result['payment_url']
+                invoice.payment_gateway = result['gateway']
+                invoice.payment_id = result['payment_id']
+                invoice.save()
+                
+                # Invalidate cache
+                invalidate_user_cache(request.user.id)
+                
+                return Response({
+                    'payment_link': result['payment_url'],
+                    'gateway': result['gateway'],
+                    'payment_id': result['payment_id']
+                })
+            else:
+                return Response(
+                    {'error': result['error']}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         
         except Exception as e:
-            logger.error(f"Razorpay error: {str(e)}")
+            logger.error(f"Payment system error: {str(e)}")
             return Response(
                 {'error': f'Failed to generate payment link: {str(e)}'}, 
                 status=status.HTTP_400_BAD_REQUEST

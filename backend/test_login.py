@@ -7,10 +7,10 @@ def test_login():
     # Test login endpoint
     login_url = f'{base_url}/auth/login/'
     
-    # Test credentials
+    # Test credentials - using existing user
     login_data = {
-        'username': 'testuser',
-        'password': 'testpass123'
+        'username': 'user',
+        'password': 'user123'
     }
     
     print("Testing login endpoint...")

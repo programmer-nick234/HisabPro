@@ -34,8 +34,9 @@ class MongoDBInvoice:
             self.total_amount = data.get('total_amount', 0.0)
             self.notes = data.get('notes', '')
             self.terms_conditions = data.get('terms_conditions', '')
-            self.razorpay_payment_link = data.get('razorpay_payment_link', '')
-            self.razorpay_order_id = data.get('razorpay_order_id', '')
+            self.payment_link = data.get('payment_link', '')
+            self.payment_gateway = data.get('payment_gateway', '')
+            self.payment_id = data.get('payment_id', '')
             self.created_at = data.get('created_at')
             self.updated_at = data.get('updated_at')
         else:
@@ -55,8 +56,9 @@ class MongoDBInvoice:
             self.total_amount = 0.0
             self.notes = ''
             self.terms_conditions = ''
-            self.razorpay_payment_link = ''
-            self.razorpay_order_id = ''
+            self.payment_link = ''
+            self.payment_gateway = ''
+            self.payment_id = ''
             self.created_at = None
             self.updated_at = None
     
@@ -78,8 +80,9 @@ class MongoDBInvoice:
             'total_amount': float(self.total_amount),
             'notes': self.notes,
             'terms_conditions': self.terms_conditions,
-            'razorpay_payment_link': self.razorpay_payment_link,
-            'razorpay_order_id': self.razorpay_order_id,
+            'payment_link': self.payment_link,
+            'payment_gateway': self.payment_gateway,
+            'payment_id': self.payment_id,
             'updated_at': datetime.utcnow()
         }
         

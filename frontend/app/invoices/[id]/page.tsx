@@ -136,11 +136,15 @@ function InvoiceDetailContent() {
 
   const handleGeneratePaymentLink = async () => {
     try {
-      const response = await invoiceAPI.generateRazorpayLink(invoiceId);
+      const response = await invoiceAPI.generatePaymentLink(invoiceId);
       if (response.data.payment_link) {
         // Update the invoice with the payment link
-        setInvoice(prev => prev ? { ...prev, razorpay_payment_link: response.data.payment_link } : null);
-        toast.success('Payment link generated successfully');
+        setInvoice(prev => prev ? { 
+          ...prev, 
+          payment_link: response.data.payment_link,
+          payment_gateway: response.data.gateway
+        } : null);
+        toast.success(`Payment link generated successfully using ${response.data.gateway}`);
       }
     } catch (error) {
       toast.error('Failed to generate payment link');
@@ -360,30 +364,35 @@ function InvoiceDetailContent() {
             </Card>
 
             {/* Payment Actions */}
-            {invoice.status === 'pending' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Payment</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {invoice.razorpay_payment_link ? (
-                    <Button 
-                      onClick={() => window.open(invoice.razorpay_payment_link, '_blank')}
-                      className="w-full"
-                    >
-                      Pay Now
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={handleGeneratePaymentLink}
-                      className="w-full"
-                    >
-                      Generate Payment Link
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+                {invoice.status === 'pending' && (
+      <Card>
+        <CardHeader>
+          <CardTitle>Payment</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {invoice.payment_link ? (
+            <div className="space-y-3">
+              <Button 
+                onClick={() => window.open(invoice.payment_link, '_blank')}
+                className="w-full"
+              >
+                Pay Now ({invoice.payment_gateway || 'razorpay'})
+              </Button>
+              <p className="text-sm text-gray-500 text-center">
+                Payment powered by {invoice.payment_gateway || 'razorpay'}
+              </p>
+            </div>
+          ) : (
+            <Button 
+              onClick={handleGeneratePaymentLink}
+              className="w-full"
+            >
+              Generate Payment Link
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    )}
           </div>
         </div>
       </div>

@@ -6,7 +6,7 @@ from .views import (
 )
 from .mongodb_views_v2 import (
     MongoDBInvoiceListCreateView, MongoDBInvoiceDetailView, MongoDBInvoiceSummaryView,
-    mongodb_recent_invoices, mark_invoice_as_paid, download_pdf, generate_razorpay_payment_link, razorpay_webhook
+    mongodb_recent_invoices, mark_invoice_as_paid, download_pdf, generate_payment_link, razorpay_webhook
 )
 
 urlpatterns = [
@@ -28,6 +28,6 @@ urlpatterns = [
     path('mongodb/invoices/recent/', mongodb_recent_invoices, name='mongodb-recent-invoices'),
     path('mongodb/invoices/<str:invoice_id>/mark-paid/', mark_invoice_as_paid, name='mongodb-mark-invoice-paid'),
     path('mongodb/invoices/<str:invoice_id>/pdf/', download_pdf, name='mongodb-download-pdf'),
-    path('mongodb/invoices/<str:invoice_id>/razorpay-link/', generate_razorpay_payment_link, name='mongodb-generate-razorpay-link'),
+            path('mongodb/invoices/<str:invoice_id>/payment-link/', generate_payment_link, name='mongodb-generate-payment-link'),
     path('mongodb/webhook/razorpay/', razorpay_webhook, name='mongodb-razorpay-webhook'),
 ]
