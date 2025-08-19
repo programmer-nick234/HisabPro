@@ -13,6 +13,11 @@ from .supabase_views import (
     download_invoice_pdf,
     generate_payment_link
 )
+from .pdf_views import (
+    generate_invoice_pdf,
+    preview_invoice_html,
+    preview_sample_invoice
+)
 
 urlpatterns = [
     # Original Django ORM views (for backward compatibility)
@@ -34,4 +39,9 @@ urlpatterns = [
     path('supabase/invoices/<str:invoice_id>/mark-paid/', mark_invoice_as_paid, name='supabase-mark-invoice-paid'),
     path('supabase/invoices/<str:invoice_id>/pdf/', download_invoice_pdf, name='supabase-download-pdf'),
     path('supabase/invoices/<str:invoice_id>/payment-link/', generate_payment_link, name='supabase-generate-payment-link'),
+    
+    # PDF Generation URLs
+    path('supabase/invoices/<str:invoice_id>/pdf-template/', generate_invoice_pdf, name='generate-invoice-pdf'),
+    path('supabase/invoices/<str:invoice_id>/preview/', preview_invoice_html, name='preview-invoice-html'),
+    path('preview/sample-invoice/', preview_sample_invoice, name='preview-sample-invoice'),
 ]

@@ -50,7 +50,9 @@ ROOT_URLCONF = 'hisabpro.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            os.path.join(BASE_DIR, 'invoices', 'templates'),
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -183,3 +185,11 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+# Business Information for Invoice Templates
+BUSINESS_NAME = 'HisabPro'
+BUSINESS_EMAIL = 'nikhilbajantri86@gmail.com'
+BUSINESS_PHONE = '+91 9096471400'
+BUSINESS_ADDRESS = '123 Business Street\nCity, State 12345'
+BUSINESS_LOGO = None  # Path to logo file
+PAYMENT_TERMS = 'Net 30 days'
