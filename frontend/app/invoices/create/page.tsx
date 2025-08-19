@@ -153,12 +153,16 @@ function CreateInvoiceContent() {
     setIsSubmitting(true);
 
     try {
+      // Simplified invoice data that matches our backend structure
       const invoiceData = {
-        ...formData,
-        items: validItems,
-        subtotal: calculateSubtotal(),
-        tax_amount: calculateTaxAmount(),
+        client_name: formData.client_name,
+        client_email: formData.client_email,
         total_amount: calculateTotal(),
+        status: 'pending',
+        notes: formData.notes || '',
+        // Optional fields that may or may not exist in the table
+        ...(formData.client_phone && { client_phone: formData.client_phone }),
+        ...(formData.client_address && { client_address: formData.client_address }),
       };
 
       await invoiceAPI.createInvoice(invoiceData);

@@ -28,9 +28,9 @@ urlpatterns = [
     
     # Supabase-based views (Real-time)
     path('supabase/invoices/', SupabaseInvoiceListCreateView.as_view(), name='supabase-invoice-list-create'),
-    path('supabase/invoices/<str:pk>/', SupabaseInvoiceDetailView.as_view(), name='supabase-invoice-detail'),
     path('supabase/invoices/summary/', supabase_invoice_summary, name='supabase-invoice-summary'),
     path('supabase/invoices/recent/', supabase_recent_invoices, name='supabase-recent-invoices'),
+    path('supabase/invoices/<str:pk>/', SupabaseInvoiceDetailView.as_view(), name='supabase-invoice-detail'),
     path('supabase/invoices/<str:invoice_id>/mark-paid/', mark_invoice_as_paid, name='supabase-mark-invoice-paid'),
     path('supabase/invoices/<str:invoice_id>/pdf/', download_invoice_pdf, name='supabase-download-pdf'),
     path('supabase/invoices/<str:invoice_id>/payment-link/', generate_payment_link, name='supabase-generate-payment-link'),

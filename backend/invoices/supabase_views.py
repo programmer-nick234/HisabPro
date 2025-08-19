@@ -68,7 +68,32 @@ class SupabaseInvoiceListCreateView(generics.ListCreateAPIView):
             
             # Create invoice in Supabase
             invoice_data = serializer.validated_data
-            invoice_id = supabase_service.create_invoice(invoice_data)
+            
+            # Auto-generate invoice number if not provided
+            if not invoice_data.get('invoice_number'):
+                from datetime import datetime
+                invoice_data['invoice_number'] = f'INV-{datetime.now().strftime("%Y%m%d%H%M%S")}'
+            
+            # Add required invoice_date if not provided
+            if not invoice_data.get('invoice_date'):
+                from datetime import datetime
+                invoice_data['invoice_date'] = datetime.now().isoformat()
+            
+            # Add required due_date if not provided (30 days from now)
+            if not invoice_data.get('due_date'):
+                from datetime import datetime, timedelta
+                due_date = datetime.now() + timedelta(days=30)
+                invoice_data['due_date'] = due_date.isoformat()
+            
+            # Ensure status is valid (use 'draft' instead of 'pending' if needed)
+            if invoice_data.get('status') == 'pending':
+                invoice_data['status'] = 'draft'
+            
+            # Filter out fields that don't exist in Supabase table
+            allowed_fields = ['invoice_number', 'client_name', 'client_email', 'total_amount', 'status', 'notes', 'payment_link', 'payment_gateway', 'payment_id', 'invoice_date', 'due_date']
+            filtered_data = {k: v for k, v in invoice_data.items() if k in allowed_fields}
+            
+            invoice_id = supabase_service.create_invoice(filtered_data)
             
             if not invoice_id:
                 return Response({'error': 'Failed to create invoice'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -208,6 +233,26 @@ def supabase_invoice_summary(request):
         user_id = request.user.id
         
         summary_data = supabase_service.get_invoice_summary(user_id)
+        logger.info(f"Summary data from service: {summary_data}")
+        
+        # If summary_data is None or not the expected format, return default values
+        if not summary_data or not isinstance(summary_data, dict):
+            summary_data = {
+                'total_invoices': 0,
+                'paid_invoices': 0,
+                'pending_invoices': 0,
+                'draft_invoices': 0,
+                'overdue_invoices': 0,
+                'total_amount': 0,
+                'paid_amount': 0,
+                'pending_amount': 0,
+                'draft_amount': 0,
+                'overdue_amount': 0,
+                'total_pending_amount': 0,
+                'total_paid_amount': 0,
+                'total_overdue_amount': 0
+            }
+        
         serializer = InvoiceSummarySerializer(summary_data)
         
         return Response(serializer.data)
