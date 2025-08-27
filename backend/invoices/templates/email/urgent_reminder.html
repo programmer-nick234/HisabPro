@@ -1,0 +1,40 @@
+{% extends "email/base_template.html" %}
+
+{% block email_title %}URGENT: Payment Required - Invoice {{ invoice_number }}{% endblock %}
+
+{% block greeting %}{{ client_name }},{% endblock %}
+
+{% block message_body %}
+<p><strong>URGENT PAYMENT NOTICE</strong></p>
+
+<p>Invoice <strong>#{{ invoice_number }}</strong> for <strong>{{ amount }}</strong> is now <strong>{{ days_overdue }} days overdue</strong> (due date: {{ due_date }}).</p>
+
+<p>Despite previous reminders, this invoice remains unpaid. Immediate action is required to avoid potential service disruption and additional charges.</p>
+
+<p><strong>Payment must be received within 48 hours to avoid:</strong></p>
+<ul style="color: #dc2626; font-weight: 600; margin-left: 20px;">
+    <li>Late payment fees</li>
+    <li>Suspension of services</li>
+    <li>Impact on credit terms</li>
+</ul>
+
+<p>If you are experiencing financial difficulties, please contact us immediately to discuss payment arrangements.</p>
+{% endblock %}
+
+{% block additional_content %}
+<div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+    <h3 style="color: #dc2626; margin-bottom: 10px;">⚠️ IMMEDIATE ACTION REQUIRED</h3>
+    <div style="color: #991b1b;">
+        <p><strong>Original Due Date:</strong> {{ due_date }}</p>
+        <p><strong>Days Overdue:</strong> {{ days_overdue }} days</p>
+        <p><strong>Amount Due:</strong> {{ amount }}</p>
+        <p><strong>Next Step:</strong> Payment or contact within 48 hours</p>
+    </div>
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="tel:{{ business_phone }}" style="display: inline-block; background: #dc2626; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 0 10px;">
+        📞 CALL NOW: {{ business_phone }}
+    </a>
+</div>
+{% endblock %}

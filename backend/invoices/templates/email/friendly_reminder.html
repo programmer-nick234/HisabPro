@@ -1,0 +1,26 @@
+{% extends "email/base_template.html" %}
+
+{% block email_title %}Friendly Reminder - Invoice {{ invoice_number }}{% endblock %}
+
+{% block greeting %}Hello {{ client_name }}! 👋{% endblock %}
+
+{% block message_body %}
+<p>I hope this email finds you well!</p>
+
+<p>This is a gentle reminder that your invoice <strong>#{{ invoice_number }}</strong> for <strong>{{ amount }}</strong> is due on <strong>{{ due_date }}</strong>.</p>
+
+<p>We truly appreciate your business and wanted to give you a friendly heads-up about the upcoming due date. If you've already processed this payment, please disregard this message.</p>
+
+<p>If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to reach out. We're always happy to help!</p>
+{% endblock %}
+
+{% block additional_content %}
+<div style="background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+    <h3 style="color: #1e3a8a; margin-bottom: 10px;">💡 Payment Options Available:</h3>
+    <ul style="color: #4b5563; margin-left: 20px;">
+        <li>Online payment via secure payment gateway</li>
+        <li>Bank transfer (details in invoice PDF)</li>
+        <li>Contact us for alternative payment methods</li>
+    </ul>
+</div>
+{% endblock %}

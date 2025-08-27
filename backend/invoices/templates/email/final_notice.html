@@ -1,0 +1,47 @@
+{% extends "email/base_template.html" %}
+
+{% block email_title %}FINAL NOTICE - Invoice {{ invoice_number }}{% endblock %}
+
+{% block greeting %}{{ client_name }},{% endblock %}
+
+{% block message_body %}
+<p><strong style="color: #dc2626; font-size: 18px;">FINAL NOTICE - IMMEDIATE PAYMENT REQUIRED</strong></p>
+
+<p>This is the <strong>FINAL NOTICE</strong> for invoice <strong>#{{ invoice_number }}</strong> in the amount of <strong>{{ amount }}</strong>, which is now <strong>{{ days_overdue }} days overdue</strong>.</p>
+
+<p><strong>CRITICAL:</strong> Payment must be received within 24 hours to avoid:</p>
+
+<div style="background: #fef2f2; border: 2px solid #dc2626; padding: 20px; margin: 20px 0; border-radius: 8px;">
+    <h3 style="color: #dc2626; margin-bottom: 15px;">⚠️ CONSEQUENCES OF NON-PAYMENT:</h3>
+    <ul style="color: #991b1b; font-weight: 600; margin-left: 20px;">
+        <li>Immediate suspension of all services</li>
+        <li>Transfer to collections agency</li>
+        <li>Additional legal and administrative fees</li>
+        <li>Potential legal action for debt recovery</li>
+        <li>Negative impact on business credit rating</li>
+    </ul>
+</div>
+
+<p>If payment has been sent, please provide proof of payment immediately. If you are unable to pay the full amount, contact us within 24 hours to discuss emergency payment arrangements.</p>
+
+<p><strong>This is your last opportunity to resolve this matter before escalation.</strong></p>
+{% endblock %}
+
+{% block additional_content %}
+<div style="background: #7f1d1d; color: white; padding: 25px; margin: 30px 0; border-radius: 8px; text-align: center;">
+    <h3 style="margin-bottom: 15px; font-size: 20px;">⏰ 24-HOUR DEADLINE</h3>
+    <p style="font-size: 18px; margin-bottom: 20px;">Pay now or contact us immediately</p>
+    <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+        <a href="{{ payment_url }}" style="background: #10b981; color: white; padding: 15px 25px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            💳 PAY NOW
+        </a>
+        <a href="tel:{{ business_phone }}" style="background: #3b82f6; color: white; padding: 15px 25px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            📞 CALL IMMEDIATELY
+        </a>
+    </div>
+</div>
+
+<div style="background: #f3f4f6; padding: 20px; margin: 20px 0; border-radius: 8px; font-size: 12px; color: #6b7280;">
+    <p><strong>Legal Notice:</strong> This communication is from a debt collector. This is an attempt to collect a debt and any information obtained will be used for that purpose. You have the right to dispute the validity of this debt within 30 days of receipt of this notice.</p>
+</div>
+{% endblock %}

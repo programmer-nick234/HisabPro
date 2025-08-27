@@ -1,1 +1,0 @@
-MONGODB_URI=mongodb+srv://nikhilbajantri86:nikhilbajantri86@cluster0.mongodb.net/hisabpro?retryWrites=true&w=majority

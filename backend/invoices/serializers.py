@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from .models import Invoice, InvoiceItem, Payment
 from auth_app.serializers import UserSerializer
 
@@ -48,16 +49,38 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
         ]
     
     def create(self, validated_data):
-        items_data = validated_data.pop('items')
-        invoice = Invoice.objects.create(**validated_data)
+        items_data = validated_data.pop('items', [])
         
-        # Generate invoice number
-        invoice.generate_invoice_number()
-        invoice.save()
+        # Ensure user is set from context
+        user = self.context.get('request').user if self.context.get('request') else None
+        if user:
+            validated_data['user'] = user
         
-        # Create invoice items
-        for item_data in items_data:
-            InvoiceItem.objects.create(invoice=invoice, **item_data)
+        # Create invoice without items first (invoice number will be auto-generated in save())
+        try:
+            invoice = Invoice.objects.create(**validated_data)
+        except Exception as e:
+            raise ValidationError(f"Failed to create invoice: {str(e)}")
+        
+        # Create invoice items if provided
+        if items_data:
+            try:
+                for item_data in items_data:
+                    InvoiceItem.objects.create(invoice=invoice, **item_data)
+            except Exception as e:
+                # If item creation fails, delete the invoice and re-raise
+                invoice.delete()
+                raise ValidationError(f"Failed to create invoice items: {str(e)}")
+        
+        # Recalculate totals after items are created
+        try:
+            invoice.calculate_totals()
+            invoice.save()
+        except Exception as e:
+            # Log error but don't fail the creation
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to calculate totals for invoice {invoice.id}: {str(e)}")
         
         return invoice
     

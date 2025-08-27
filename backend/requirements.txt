@@ -12,3 +12,7 @@ celery==5.3.4
 redis==5.0.1
 gunicorn==21.2.0
 whitenoise==6.6.0
+# PDF Generation Dependencies
+playwright==1.40.0
+weasyprint==60.2
+jinja2==3.1.2

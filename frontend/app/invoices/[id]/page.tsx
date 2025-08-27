@@ -22,6 +22,8 @@ interface InvoiceItem {
   quantity: number;
   unit_price: number;
   total: number;
+  name?: string;
+  tax_amount?: number;
 }
 
 interface Invoice {
@@ -43,6 +45,8 @@ interface Invoice {
   created_at: string;
   items: InvoiceItem[];
   razorpay_payment_link?: string;
+  payment_link?: string;
+  payment_gateway?: string;
 }
 
 function InvoiceDetailPage() {
@@ -77,8 +81,11 @@ function InvoiceDetailContent() {
   const loadInvoice = async () => {
     try {
       const response = await invoiceAPI.getInvoice(invoiceId);
+      console.log('Invoice data received:', response.data);
+      console.log('Invoice items:', response.data.items);
       setInvoice(response.data);
     } catch (error) {
+      console.error('Error loading invoice:', error);
       toast.error('Failed to load invoice');
       router.push('/invoices');
     } finally {
@@ -299,14 +306,22 @@ function InvoiceDetailContent() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {invoice.items?.map((item) => (
-                        <tr key={item.id}>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.description}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900 text-right">{item.quantity}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900 text-right">{formatCurrency(item.unit_price)}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900 text-right">{formatCurrency(item.total)}</td>
+                      {invoice.items && invoice.items.length > 0 ? (
+                        invoice.items.map((item) => (
+                          <tr key={item.id}>
+                            <td className="px-4 py-2 text-sm text-gray-900">{item.description}</td>
+                            <td className="px-4 py-2 text-sm text-gray-900 text-right">{item.quantity}</td>
+                            <td className="px-4 py-2 text-sm text-gray-900 text-right">{formatCurrency(item.unit_price)}</td>
+                            <td className="px-4 py-2 text-sm text-gray-900 text-right">{formatCurrency(item.total)}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
+                            No items added to this invoice
+                          </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>

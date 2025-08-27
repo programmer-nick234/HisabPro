@@ -2,6 +2,7 @@ from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
+from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from django.db.models import Sum, Count
 from django.http import HttpResponse
@@ -10,6 +11,7 @@ from django.utils import timezone
 from django.conf import settings
 import razorpay
 import io
+import logging
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib.units import inch
@@ -19,6 +21,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
 from datetime import datetime
 import json
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 from .models import Invoice, InvoiceItem, Payment
 from .serializers import (
@@ -43,7 +48,38 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
         return InvoiceSerializer
     
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        try:
+            logger.info(f"Creating invoice for user {self.request.user.id}")
+            logger.debug(f"Invoice data: {serializer.validated_data}")
+            
+            invoice = serializer.save(user=self.request.user)
+            
+            logger.info(f"Successfully created invoice {invoice.id} with number {invoice.invoice_number}")
+        except Exception as e:
+            logger.error(f"Failed to create invoice for user {self.request.user.id}: {str(e)}")
+            raise
+    
+    def create(self, request, *args, **kwargs):
+        try:
+            logger.info(f"Invoice creation request from user {request.user.id}")
+            logger.debug(f"Request data: {request.data}")
+            
+            response = super().create(request, *args, **kwargs)
+            
+            logger.info(f"Invoice creation successful for user {request.user.id}")
+            return response
+        except ValidationError as e:
+            logger.warning(f"Validation error during invoice creation for user {request.user.id}: {str(e)}")
+            return Response(
+                {'error': 'Validation failed', 'details': e.detail}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error during invoice creation for user {request.user.id}: {str(e)}")
+            return Response(
+                {'error': 'Internal server error. Please try again.'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class InvoiceDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -86,197 +122,105 @@ class InvoiceSummaryView(APIView):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def generate_razorpay_payment_link(request, invoice_id):
+    """
+    Enhanced payment link generation with all payment methods
+    """
     invoice = get_object_or_404(Invoice, id=invoice_id, user=request.user)
     
     try:
-        # Create Razorpay order
-        order_data = {
-            'amount': int(invoice.total_amount * 100),  # Convert to paise
-            'currency': 'INR',
-            'receipt': f'invoice_{invoice.invoice_number}',
-            'notes': {
-                'invoice_number': invoice.invoice_number,
-                'client_name': invoice.client_name,
-            }
-        }
+        # Import payment service
+        from .payment_service import payment_service
         
-        order = razorpay_client.order.create(data=order_data)
+        # Get options from request
+        send_email = request.data.get('send_email', True)
+        custom_options = request.data.get('options', {})
         
-        # Create payment link
-        payment_link_data = {
-            'amount': int(invoice.total_amount * 100),
-            'currency': 'INR',
-            'accept_partial': False,
-            'reference_id': f'invoice_{invoice.invoice_number}',
-            'description': f'Payment for Invoice #{invoice.invoice_number}',
-            'callback_url': f'{settings.FRONTEND_URL}/payment-success',
-            'callback_method': 'get',
-        }
+        # Create payment link with all payment methods
+        result = payment_service.create_payment_link(invoice, custom_options)
         
-        payment_link = razorpay_client.payment_link.create(data=payment_link_data)
+        if not result['success']:
+            return Response({'error': result['error']}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Save payment link and order ID to invoice
-        invoice.razorpay_payment_link = payment_link['short_url']
-        invoice.razorpay_order_id = order['id']
+        # Save payment link to invoice
+        invoice.razorpay_payment_link = result['short_url']
+        invoice.razorpay_payment_link_id = result['payment_link_id']
         invoice.save()
         
-        serializer = RazorpayPaymentLinkSerializer({
-            'payment_link': payment_link['short_url'],
-            'order_id': order['id']
-        })
-        return Response(serializer.data)
+        # Send email if requested
+        if send_email and invoice.client_email:
+            email_sent = payment_service.send_payment_link_email(invoice, result)
+            result['email_sent'] = email_sent
+        
+        # Return response
+        response_data = {
+            'payment_link': result['short_url'],
+            'payment_link_id': result['payment_link_id'],
+            'amount': result['amount'],
+            'currency': result['currency'],
+            'expire_by': result['expire_by'].isoformat(),
+            'email_sent': result.get('email_sent', False)
+        }
+        
+        return Response(response_data)
     
     except Exception as e:
+        logger.error(f"Error generating payment link for invoice {invoice_id}: {str(e)}")
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def download_pdf(request, invoice_id):
-    invoice = get_object_or_404(Invoice, id=invoice_id, user=request.user)
-    
-    # Create PDF
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
-    elements = []
-    
-    # Styles
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Heading1'],
-        fontSize=24,
-        spaceAfter=30,
-        alignment=TA_CENTER
-    )
-    
-    # Header
-    elements.append(Paragraph(f"INVOICE #{invoice.invoice_number}", title_style))
-    elements.append(Spacer(1, 20))
-    
-    # Company and Client Info
-    company_info = []
-    if invoice.user.userprofile.company_name:
-        company_info.append([Paragraph(f"<b>From:</b>", styles['Normal']), 
-                           Paragraph(invoice.user.userprofile.company_name, styles['Normal'])])
-    if invoice.user.userprofile.address:
-        company_info.append(['', Paragraph(invoice.user.userprofile.address, styles['Normal'])])
-    if invoice.user.userprofile.phone:
-        company_info.append(['', Paragraph(f"Phone: {invoice.user.userprofile.phone}", styles['Normal'])])
-    if invoice.user.userprofile.gst_number:
-        company_info.append(['', Paragraph(f"GST: {invoice.user.userprofile.gst_number}", styles['Normal'])])
-    
-    client_info = []
-    client_info.append([Paragraph(f"<b>To:</b>", styles['Normal']), 
-                       Paragraph(invoice.client_name, styles['Normal'])])
-    if invoice.client_address:
-        client_info.append(['', Paragraph(invoice.client_address, styles['Normal'])])
-    if invoice.client_phone:
-        client_info.append(['', Paragraph(f"Phone: {invoice.client_phone}", styles['Normal'])])
-    if invoice.client_email:
-        client_info.append(['', Paragraph(f"Email: {invoice.client_email}", styles['Normal'])])
-    
-    # Combine company and client info
-    info_data = []
-    for i in range(max(len(company_info), len(client_info))):
-        row = []
-        if i < len(company_info):
-            row.extend(company_info[i])
-        else:
-            row.extend(['', ''])
-        if i < len(client_info):
-            row.extend(client_info[i])
-        else:
-            row.extend(['', ''])
-        info_data.append(row)
-    
-    info_table = Table(info_data, colWidths=[1*inch, 2*inch, 1*inch, 2*inch])
-    info_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-    ]))
-    elements.append(info_table)
-    elements.append(Spacer(1, 20))
-    
-    # Invoice Details
-    details_data = [
-        ['Issue Date:', invoice.issue_date.strftime('%B %d, %Y')],
-        ['Due Date:', invoice.due_date.strftime('%B %d, %Y')],
-        ['Status:', invoice.status.title()],
-    ]
-    
-    details_table = Table(details_data, colWidths=[1*inch, 2*inch])
-    details_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-    ]))
-    elements.append(details_table)
-    elements.append(Spacer(1, 20))
-    
-    # Items Table
-    items_data = [['Description', 'Quantity', 'Unit Price', 'Total']]
-    for item in invoice.items.all():
-        items_data.append([
-            item.description,
-            str(item.quantity),
-            f"₹{item.unit_price:,.2f}",
-            f"₹{item.total:,.2f}"
-        ])
-    
-    items_table = Table(items_data, colWidths=[3*inch, 1*inch, 1*inch, 1*inch])
-    items_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 12),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
-        ('ALIGN', (0, 1), (0, -1), 'LEFT'),
-    ]))
-    elements.append(items_table)
-    elements.append(Spacer(1, 20))
-    
-    # Totals
-    totals_data = [
-        ['Subtotal:', f"₹{invoice.subtotal:,.2f}"],
-        ['Tax ({:.1f}%):'.format(invoice.tax_rate), f"₹{invoice.tax_amount:,.2f}"],
-        ['Total:', f"₹{invoice.total_amount:,.2f}"],
-    ]
-    
-    totals_table = Table(totals_data, colWidths=[4*inch, 2*inch])
-    totals_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
-        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-        ('FONTNAME', (0, -1), (1, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, -1), (1, -1), 14),
-        ('LINEABOVE', (0, -1), (1, -1), 1, colors.black),
-    ]))
-    elements.append(totals_table)
-    
-    # Notes and Terms
-    if invoice.notes:
-        elements.append(Spacer(1, 20))
-        elements.append(Paragraph(f"<b>Notes:</b>", styles['Heading3']))
-        elements.append(Paragraph(invoice.notes, styles['Normal']))
-    
-    if invoice.terms_conditions:
-        elements.append(Spacer(1, 20))
-        elements.append(Paragraph(f"<b>Terms & Conditions:</b>", styles['Heading3']))
-        elements.append(Paragraph(invoice.terms_conditions, styles['Normal']))
-    
-    # Build PDF
-    doc.build(elements)
-    buffer.seek(0)
-    
-    # Create response
-    response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
+    """Generate and download PDF invoice using optimized PDF service"""
+    try:
+        invoice = get_object_or_404(Invoice, id=invoice_id, user=request.user)
+        
+        # Import PDF service
+        from lib.pdf_service import pdf_service
+        
+        # Prepare context for template
+        context = {
+            'invoice': invoice,
+            'items': invoice.items.all() if hasattr(invoice, 'items') else [],
+        }
+        
+        # PDF generation options
+        pdf_options = {
+            'format': 'A4',
+            'margin': {
+                'top': '20mm',
+                'right': '20mm',
+                'bottom': '20mm',
+                'left': '20mm'
+            },
+            'printBackground': True,
+            'preferCSSPageSize': True,
+        }
+        
+        # Generate PDF using the new service
+        pdf_bytes = pdf_service.generate_pdf_from_template(
+            template_name='invoice_pdf_template.html',
+            context=context,
+            options=pdf_options,
+            method='auto'  # Will try Playwright first, then WeasyPrint, then ReportLab
+        )
+        
+        # Create response
+        filename = f"invoice_{invoice.invoice_number}.pdf"
+        response = pdf_service.create_pdf_response(
+            pdf_bytes=pdf_bytes,
+            filename=filename,
+            inline=False  # Force download
+        )
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"PDF generation failed for invoice {invoice_id}: {e}")
+        return Response(
+            {'error': 'Failed to generate PDF. Please try again.'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
     return response
 
 
@@ -288,37 +232,143 @@ def send_reminder(request, invoice_id):
     
     if serializer.is_valid():
         try:
-            from django.core.mail import send_mail
+            from django.core.mail import EmailMultiAlternatives
             from django.template.loader import render_to_string
+            from datetime import date, timedelta
             
-            # Prepare email content
-            subject = f"Payment Reminder - Invoice #{invoice.invoice_number}"
+            # Calculate days overdue
+            today = date.today()
+            if isinstance(invoice.due_date, str):
+                due_date = timezone.datetime.strptime(invoice.due_date, '%Y-%m-%d').date()
+            else:
+                due_date = invoice.due_date
+            
+            days_overdue = max(0, (today - due_date).days)
+            
+            # Determine template and subject based on status
+            if days_overdue > 0:
+                template_name = 'email/urgent_reminder.html'
+                subject = f"🚨 URGENT: Payment Overdue - Invoice #{invoice.invoice_number}"
+                greeting = f"Dear {invoice.client_name},"
+            elif (due_date - today).days <= 3:
+                template_name = 'email/friendly_reminder.html'
+                subject = f"💰 Friendly Reminder - Invoice #{invoice.invoice_number}"
+                greeting = f"Hello {invoice.client_name}! 👋"
+            else:
+                template_name = 'email/professional_reminder.html'
+                subject = f"📋 Payment Reminder - Invoice #{invoice.invoice_number}"
+                greeting = f"Dear {invoice.client_name},"
             
             # Custom message or default
             custom_message = serializer.validated_data.get('message', '')
             if not custom_message:
-                custom_message = f"""
-                Dear {invoice.client_name},
-                
-                This is a friendly reminder that payment for Invoice #{invoice.invoice_number} 
-                amounting to ₹{invoice.total_amount:,.2f} is due on {invoice.due_date.strftime('%B %d, %Y')}.
-                
-                Please process the payment at your earliest convenience.
-                
-                Thank you for your business.
-                
-                Best regards,
-                {request.user.get_full_name() or request.user.username}
+                if days_overdue > 0:
+                    custom_message = f'''<p>We hope this email finds you well.</p>
+<p>This is an urgent reminder that your invoice <strong>#{invoice.invoice_number}</strong> for <strong>₹{invoice.total_amount:,.2f}</strong> is now <strong>{days_overdue} days overdue</strong>.</p>
+<p>To avoid any service disruption, please process the payment immediately or contact us to discuss payment arrangements.</p>'''
+                else:
+                    custom_message = f'''<p>We hope this email finds you well!</p>
+<p>This is a friendly reminder that your invoice <strong>#{invoice.invoice_number}</strong> for <strong>₹{invoice.total_amount:,.2f}</strong> is due on <strong>{due_date.strftime('%B %d, %Y')}</strong>.</p>
+<p>If you've already processed this payment, please disregard this message. If you have any questions, we're here to help!</p>'''
+            
+            # Format dates
+            def format_date(date_value):
+                if isinstance(date_value, str):
+                    try:
+                        parsed_date = timezone.datetime.strptime(date_value, '%Y-%m-%d').date()
+                        return parsed_date.strftime('%B %d, %Y')
+                    except:
+                        return date_value
+                else:
+                    return date_value.strftime('%B %d, %Y')
+            
+            # Prepare template context for beautiful HTML email
+            context = {
+                'email_title': subject,
+                'greeting': greeting,
+                'message_body': custom_message,
+                'business_name': getattr(settings, 'BUSINESS_NAME', 'DailyDine'),
+                'business_email': getattr(settings, 'BUSINESS_EMAIL', 'contact@dailydine.com'),
+                'business_phone': getattr(settings, 'BUSINESS_PHONE', '+91 98765 43210'),
+                'business_address': getattr(settings, 'BUSINESS_ADDRESS', '123 Business St, Mumbai, MH 400001'),
+                'invoice_number': invoice.invoice_number,
+                'client_name': invoice.client_name,
+                'client_email': invoice.client_email,
+                'amount': f"₹{invoice.total_amount:,.2f}",
+                'due_date': format_date(invoice.due_date),
+                'issue_date': format_date(invoice.issue_date),
+                'days_overdue': days_overdue,
+                'due_status_class': 'status-overdue' if days_overdue > 0 else 'status-due-soon',
+                'payment_status': f'{days_overdue} days overdue' if days_overdue > 0 else 'Due soon',
+                'status_class': 'status-overdue' if days_overdue > 0 else 'status-due-soon',
+                'payment_url': f"https://dailydine.com/pay/{invoice.id}",
+                'invoice_pdf_url': f"https://dailydine.com/api/invoices/{invoice.id}/pdf/",
+                'whatsapp_url': f"https://wa.me/{getattr(settings, 'BUSINESS_PHONE', '919876543210').replace('+', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')}",
+                'support_url': f"mailto:{getattr(settings, 'BUSINESS_EMAIL', 'support@dailydine.com')}",
+                'current_year': timezone.now().year,
+                'current_date': today.strftime('%B %d, %Y'),
+                'legal_deadline': (today + timedelta(days=30)).strftime('%B %d, %Y'),
+                'total_with_fees': f"₹{float(invoice.total_amount) * 1.15:,.2f}",
+                'additional_content': '',
+            }
+            
+            # Plain text fallback
+            plain_text = f"""
+            Dear {invoice.client_name},
+            
+            This is a reminder about Invoice #{invoice.invoice_number} for ₹{invoice.total_amount:,.2f}.
+            
+            {"This invoice is now overdue." if days_overdue > 0 else "This invoice is due soon."}
+            
+            Please process the payment at your earliest convenience.
+            
+            Thank you for your business.
+            
+            Best regards,
+            {getattr(settings, 'BUSINESS_NAME', 'DailyDine')}
+            """
+            
+            # Render beautiful HTML email
+            try:
+                html_content = render_to_string(template_name, context)
+            except Exception as e:
+                logger.error(f"Template rendering failed: {str(e)}")
+                # Fallback to simple HTML
+                html_content = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #1e3a8a;">DailyDine</h2>
+                        <h3>{context['greeting']}</h3>
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <p><strong>Invoice:</strong> #{context['invoice_number']}</p>
+                            <p><strong>Amount:</strong> {context['amount']}</p>
+                            <p><strong>Due Date:</strong> {context['due_date']}</p>
+                            <p><strong>Status:</strong> {context['payment_status']}</p>
+                        </div>
+                        {context['message_body']}
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{context['payment_url']}" style="background: #10b981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">Pay Now</a>
+                        </div>
+                        <p>Best regards,<br>{context['business_name']}</p>
+                    </div>
+                </body>
+                </html>
                 """
             
-            # Send email
-            send_mail(
+            # Create and send beautiful email
+            email = EmailMultiAlternatives(
                 subject=subject,
-                message=custom_message,
+                body=plain_text,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[invoice.client_email],
-                fail_silently=False,
+                to=[invoice.client_email]
             )
+            
+            # Add beautiful HTML version
+            email.attach_alternative(html_content, "text/html")
+            
+            # Send email
+            email.send()
             
             # Update reminder info
             invoice.last_reminder_sent = timezone.now()
@@ -400,26 +450,113 @@ def razorpay_webhook(request):
                     invoice.status = 'paid'
                     invoice.save()
                     
-                    # Send confirmation email to client
+                    # Send beautiful payment confirmation email
                     try:
-                        send_mail(
-                            subject=f'Payment Received - Invoice #{invoice.invoice_number}',
-                            message=f'''
-                            Dear {invoice.client_name},
-                            
-                            We have received your payment of ₹{amount} for Invoice #{invoice.invoice_number}.
-                            
-                            Thank you for your business!
-                            
-                            Best regards,
-                            {invoice.user.get_full_name() or invoice.user.username}
+                        from django.core.mail import EmailMultiAlternatives
+                        from django.template.loader import render_to_string
+                        from datetime import date, timedelta
+                        
+                        subject = f'🎉 Payment Received - Invoice #{invoice.invoice_number}'
+                        
+                        # Prepare context for beautiful payment confirmation
+                        context = {
+                            'email_title': subject,
+                            'greeting': f'Dear {invoice.client_name}! 🎉',
+                            'message_body': f'''
+                            <p><strong>Great news!</strong> We have successfully received your payment.</p>
+                            <p>✅ <strong>Payment Amount:</strong> ₹{amount:,.2f}</p>
+                            <p>📋 <strong>Invoice Number:</strong> #{invoice.invoice_number}</p>
+                            <p>📅 <strong>Payment Date:</strong> {date.today().strftime('%B %d, %Y')}</p>
+                            <p>Your invoice has been marked as <strong style="color: #10b981;">PAID</strong>.</p>
+                            <p>Thank you for your prompt payment and continued business with us!</p>
                             ''',
+                            'business_name': getattr(settings, 'BUSINESS_NAME', 'DailyDine'),
+                            'business_email': getattr(settings, 'BUSINESS_EMAIL', 'contact@dailydine.com'),
+                            'business_phone': getattr(settings, 'BUSINESS_PHONE', '+91 98765 43210'),
+                            'business_address': getattr(settings, 'BUSINESS_ADDRESS', '123 Business St, Mumbai, MH 400001'),
+                            'invoice_number': invoice.invoice_number,
+                            'client_name': invoice.client_name,
+                            'client_email': invoice.client_email,
+                            'amount': f"₹{amount:,.2f}",
+                            'due_date': invoice.due_date.strftime('%B %d, %Y') if hasattr(invoice.due_date, 'strftime') else str(invoice.due_date),
+                            'issue_date': invoice.issue_date.strftime('%B %d, %Y') if hasattr(invoice.issue_date, 'strftime') else str(invoice.issue_date),
+                            'days_overdue': 0,
+                            'due_status_class': 'status-paid',
+                            'payment_status': 'PAID ✅',
+                            'status_class': 'status-paid',
+                            'payment_url': f"https://dailydine.com/invoices/{invoice.id}",
+                            'invoice_pdf_url': f"https://dailydine.com/api/invoices/{invoice.id}/pdf/",
+                            'whatsapp_url': f"https://wa.me/{getattr(settings, 'BUSINESS_PHONE', '919876543210').replace('+', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')}",
+                            'support_url': f"mailto:{getattr(settings, 'BUSINESS_EMAIL', 'support@dailydine.com')}",
+                            'current_year': timezone.now().year,
+                            'current_date': date.today().strftime('%B %d, %Y'),
+                            'legal_deadline': '',
+                            'total_with_fees': f"₹{amount:,.2f}",
+                            'additional_content': '''
+                            <div style="background: #dcfce7; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                                <h3 style="color: #059669; margin-bottom: 10px;">🎉 Payment Successfully Received!</h3>
+                                <ul style="color: #047857; margin-left: 20px;">
+                                    <li>Invoice status updated to PAID</li>
+                                    <li>Receipt available for download</li>
+                                    <li>Thank you for your business!</li>
+                                </ul>
+                            </div>
+                            ''',
+                        }
+                        
+                        # Plain text fallback
+                        plain_text = f"""
+                        Dear {invoice.client_name},
+                        
+                        Great news! We have successfully received your payment of ₹{amount:,.2f} for Invoice #{invoice.invoice_number}.
+                        
+                        Your invoice has been marked as PAID.
+                        
+                        Thank you for your business!
+                        
+                        Best regards,
+                        {getattr(settings, 'BUSINESS_NAME', 'DailyDine')}
+                        """
+                        
+                        # Use friendly template for payment confirmation
+                        try:
+                            html_content = render_to_string('email/friendly_reminder.html', context)
+                        except Exception as e:
+                            # Fallback HTML
+                            html_content = f"""
+                            <html>
+                            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                                    <h2 style="color: #10b981;">🎉 Payment Received!</h2>
+                                    <h3>Dear {invoice.client_name}!</h3>
+                                    <div style="background: #dcfce7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+                                        <p><strong>Payment Amount:</strong> ₹{amount:,.2f}</p>
+                                        <p><strong>Invoice:</strong> #{invoice.invoice_number}</p>
+                                        <p><strong>Status:</strong> <span style="color: #10b981; font-weight: bold;">PAID ✅</span></p>
+                                    </div>
+                                    <p>We have successfully received your payment. Thank you for your business!</p>
+                                    <p>Best regards,<br>DailyDine</p>
+                                </div>
+                            </body>
+                            </html>
+                            """
+                        
+                        # Create and send beautiful confirmation email
+                        email = EmailMultiAlternatives(
+                            subject=subject,
+                            body=plain_text,
                             from_email=settings.DEFAULT_FROM_EMAIL,
-                            recipient_list=[invoice.client_email],
-                            fail_silently=True,
+                            to=[invoice.client_email]
                         )
+                        
+                        # Add beautiful HTML version
+                        email.attach_alternative(html_content, "text/html")
+                        
+                        # Send email
+                        email.send()
+                        
                     except Exception as e:
-                        print(f"Failed to send payment confirmation email: {e}")
+                        print(f"Failed to send beautiful payment confirmation email: {e}")
                 
             except Invoice.DoesNotExist:
                 print(f"Invoice not found for order ID: {order_id}")

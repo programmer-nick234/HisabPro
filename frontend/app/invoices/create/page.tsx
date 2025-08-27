@@ -153,24 +153,61 @@ function CreateInvoiceContent() {
     setIsSubmitting(true);
 
     try {
-      // Simplified invoice data that matches our backend structure
+      // Complete invoice data that matches backend serializer expectations
       const invoiceData = {
         client_name: formData.client_name,
         client_email: formData.client_email,
-        total_amount: calculateTotal(),
-        status: 'pending',
+        client_phone: formData.client_phone || '',
+        client_address: formData.client_address || '',
+        issue_date: formData.issue_date,
+        due_date: formData.due_date,
+        tax_rate: formData.tax_rate,
         notes: formData.notes || '',
-        // Optional fields that may or may not exist in the table
-        ...(formData.client_phone && { client_phone: formData.client_phone }),
-        ...(formData.client_address && { client_address: formData.client_address }),
+        terms_conditions: formData.terms_conditions || '',
+        items: validItems.map(item => ({
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price
+        }))
       };
 
+      console.log('Sending invoice data:', invoiceData);
       await invoiceAPI.createInvoice(invoiceData);
       toast.success('Invoice created successfully!');
       router.push('/invoices');
     } catch (error: any) {
       console.error('Error creating invoice:', error);
-      toast.error(error.response?.data?.error || 'Failed to create invoice');
+      
+      // Better error handling
+      let errorMessage = 'Failed to create invoice';
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        } else if (error.response.data.detail) {
+          errorMessage = error.response.data.detail;
+        } else if (error.response.data.non_field_errors) {
+          errorMessage = error.response.data.non_field_errors.join(', ');
+        } else {
+          // Show validation errors
+          const validationErrors = [];
+          for (const [field, messages] of Object.entries(error.response.data)) {
+            if (Array.isArray(messages)) {
+              validationErrors.push(`${field}: ${messages.join(', ')}`);
+            } else if (typeof messages === 'string') {
+              validationErrors.push(`${field}: ${messages}`);
+            }
+          }
+          if (validationErrors.length > 0) {
+            errorMessage = validationErrors.join('; ');
+          }
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

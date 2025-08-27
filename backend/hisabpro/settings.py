@@ -158,10 +158,43 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='nikhilbajantri86@gmail.com'
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='efleuomllopzfcja')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='nikhilbajantri86@gmail.com')
 
-# Razorpay settings
+# Razorpay settings - Complete Payment Gateway Configuration
 RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID', default='')
 RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET', default='')
 RAZORPAY_WEBHOOK_SECRET = config('RAZORPAY_WEBHOOK_SECRET', default='')
+
+# Business Information (defined early for use in payment config)
+BUSINESS_NAME = 'HisabPro'
+BUSINESS_EMAIL = 'nikhilbajantri86@gmail.com'
+BUSINESS_PHONE = '+91 9096471400'
+BUSINESS_ADDRESS = 'Mangalore, Karnataka, India'
+
+# Payment Gateway Configuration
+PAYMENT_GATEWAY_CONFIG = {
+    'enabled_methods': ['card', 'netbanking', 'wallet', 'upi'],
+    'currency': 'INR',
+    'theme_color': '#3399cc',
+    'company_name': BUSINESS_NAME,
+    'company_logo': '',  # Add your logo URL here
+    'checkout_logo': '',  # Logo for checkout page
+    'allow_rotation': True,
+    'remember_customer': True,
+    'timeout': 900,  # 15 minutes timeout
+    'retry': {
+        'enabled': True,
+        'max_count': 3
+    }
+}
+
+# Payment Link Configuration
+PAYMENT_LINK_CONFIG = {
+    'expire_by': 30,  # Days until payment link expires
+    'send_sms': False,  # Keep cost-free
+    'send_email': True,
+    'reminder_enable': True,
+    'callback_url': '',  # Will be set dynamically
+    'callback_method': 'get'
+}
 
 # Celery settings
 CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
@@ -186,10 +219,57 @@ LOGGING = {
     },
 }
 
-# Business Information for Invoice Templates
-BUSINESS_NAME = 'HisabPro'
-BUSINESS_EMAIL = 'nikhilbajantri86@gmail.com'
-BUSINESS_PHONE = '+91 9096471400'
-BUSINESS_ADDRESS = '123 Business Street\nCity, State 12345'
+# SMS Configuration (Disabled by default to keep system cost-free)
+SMS_ENABLED = config('SMS_ENABLED', default=False, cast=bool)
+SMS_API_KEY = config('SMS_API_KEY', default='')
+SMS_SENDER_ID = config('SMS_SENDER_ID', default='HISABPRO')
+SMS_API_URL = config('SMS_API_URL', default='')
+
+# Reminder System Settings
+REMINDER_EMAIL_ONLY = True  # Use email-only reminders to avoid SMS costs
+DEFAULT_REMINDER_CHANNEL = 'email'  # Primary channel for reminders
+
+# Additional Business Settings for Invoice Templates
 BUSINESS_LOGO = None  # Path to logo file
 PAYMENT_TERMS = 'Net 30 days'
+
+# PDF Generation Settings
+USE_PLAYWRIGHT_PDF = config('USE_PLAYWRIGHT_PDF', default=True, cast=bool)
+USE_WEASYPRINT_PDF = config('USE_WEASYPRINT_PDF', default=True, cast=bool)
+USE_REPORTLAB_PDF = config('USE_REPORTLAB_PDF', default=True, cast=bool)
+
+# PDF Generation Options
+PDF_GENERATION_OPTIONS = {
+    'format': 'A4',
+    'margin': {
+        'top': '20mm',
+        'right': '20mm',
+        'bottom': '20mm',
+        'left': '20mm'
+    },
+    'printBackground': True,
+    'preferCSSPageSize': True,
+    'scale': 1.0,
+}
+
+# Playwright Settings (for PDF generation)
+PLAYWRIGHT_BROWSER_ARGS = [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-accelerated-2d-canvas',
+    '--no-first-run',
+    '--no-zygote',
+    '--disable-gpu',
+    '--disable-web-security',
+    '--disable-features=VizDisplayCompositor',
+]
+
+SMS_API_KEY = 'your_sms_api_key'
+SMS_SENDER_ID = 'HISABPRO'
+SMS_API_URL = 'https://your-sms-provider.com/api/send'
+
+BUSINESS_NAME = 'DailyDine'
+BUSINESS_EMAIL = 'nikhilbajantri86@gmail.com'
+BUSINESS_PHONE = '+91 9019647142'
+BUSINESS_ADDRESS = 'Mangalore, Karnataka, India'

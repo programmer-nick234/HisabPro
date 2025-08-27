@@ -1,0 +1,54 @@
+{% extends "email/base_template.html" %}
+
+{% block email_title %}LEGAL NOTICE - Invoice {{ invoice_number }}{% endblock %}
+
+{% block greeting %}{{ client_name }},{% endblock %}
+
+{% block message_body %}
+<p><strong style="color: #7f1d1d; font-size: 20px;">LEGAL NOTICE - DEBT COLLECTION</strong></p>
+
+<p>This is a formal legal notice regarding the unpaid invoice <strong>#{{ invoice_number }}</strong> in the amount of <strong>{{ amount }}</strong>, which is now <strong>{{ days_overdue }} days overdue</strong>.</p>
+
+<p><strong>NOTICE:</strong> This matter has been escalated to our legal department for collection proceedings.</p>
+
+<div style="background: #7f1d1d; color: white; padding: 25px; margin: 30px 0; border-radius: 8px;">
+    <h3 style="margin-bottom: 15px;">⚖️ LEGAL ACTION INITIATED</h3>
+    <p>Unless payment is received within <strong>7 days</strong>, we will proceed with:</p>
+    <ul style="margin: 15px 0 15px 20px;">
+        <li>Filing a claim in small claims court</li>
+        <li>Engaging a collection agency</li>
+        <li>Reporting to credit bureaus</li>
+        <li>Pursuing all available legal remedies</li>
+    </ul>
+</div>
+
+<p><strong>TOTAL AMOUNT NOW DUE:</strong> {{ total_with_fees }} (includes original amount plus legal fees and interest)</p>
+
+<p>You have the right to dispute this debt within 30 days of receiving this notice. If you do not dispute the debt within 30 days, we will assume it is valid.</p>
+
+<p><strong>IMMEDIATE PAYMENT IS REQUIRED TO AVOID LEGAL PROCEEDINGS.</strong></p>
+{% endblock %}
+
+{% block additional_content %}
+<div style="border: 3px solid #7f1d1d; padding: 25px; margin: 30px 0; border-radius: 8px;">
+    <h3 style="color: #7f1d1d; margin-bottom: 15px; text-align: center;">⚖️ LEGAL DEPARTMENT CONTACT</h3>
+    <div style="text-align: center;">
+        <p style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">For immediate resolution, contact:</p>
+        <a href="tel:{{ legal_phone }}" style="display: inline-block; background: #7f1d1d; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 10px;">
+            📞 Legal Dept: {{ business_phone }}
+        </a>
+        <a href="mailto:{{ legal_email }}" style="display: inline-block; background: #374151; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 10px;">
+            📧 {{ business_email }}
+        </a>
+    </div>
+</div>
+
+<div style="background: #f9fafb; border: 1px solid #d1d5db; padding: 20px; margin: 20px 0; border-radius: 8px; font-size: 11px; color: #4b5563;">
+    <h4 style="margin-bottom: 10px;">DEBT COLLECTION NOTICE:</h4>
+    <p>This is an attempt to collect a debt and any information obtained will be used for that purpose. This communication is from a debt collector. If you are married, your spouse may also be liable for this debt. You have the right to make a written or oral request to discuss payment options. You have the right to dispute the validity of this debt or any portion thereof within thirty (30) days after receipt of this notice. Unless you dispute the validity of this debt or any portion thereof within thirty (30) days after receipt of this notice, this office will assume this debt is valid.</p>
+    <br>
+    <p><strong>Reference Number:</strong> {{ invoice_number }}-LEGAL</p>
+    <p><strong>Legal Notice Date:</strong> {{ current_date }}</p>
+    <p><strong>Response Deadline:</strong> {{ legal_deadline }}</p>
+</div>
+{% endblock %}

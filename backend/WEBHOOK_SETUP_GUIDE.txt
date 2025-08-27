@@ -1,0 +1,69 @@
+🚀 RAZORPAY WEBHOOK URL SETUP - STEP BY STEP GUIDE
+
+═══════════════════════════════════════════════════════════
+
+STEP 1: SETUP NGROK ACCOUNT
+---------------------------
+1. Go to: https://dashboard.ngrok.com/signup
+2. Sign up with your email (FREE)
+3. Verify your email
+4. Login to dashboard
+
+STEP 2: GET YOUR AUTHTOKEN
+--------------------------
+1. After login, go to: https://dashboard.ngrok.com/get-started/your-authtoken
+2. Copy your authtoken (looks like: 2abc123def456ghi789jkl)
+
+STEP 3: ADD AUTHTOKEN TO NGROK
+------------------------------
+Run this command (replace with YOUR actual authtoken):
+ngrok config add-authtoken YOUR_AUTHTOKEN_FROM_DASHBOARD
+
+STEP 4: START DJANGO SERVER
+---------------------------
+Your Django server is already running on port 8000!
+If not running, use: python manage.py runserver 0.0.0.0:8000
+
+STEP 5: START NGROK TUNNEL
+--------------------------
+Run this command (CORRECT SYNTAX):
+ngrok http 8000
+
+NOT: ngrok http 8ngrok http 8000 ❌
+BUT: ngrok http 8000 ✅
+
+STEP 6: GET YOUR WEBHOOK URL
+----------------------------
+After ngrok starts, you'll see:
+Forwarding    https://abc123.ngrok.io -> http://localhost:8000
+
+Your webhook URL will be:
+https://abc123.ngrok.io/api/webhook/razorpay/
+
+STEP 7: SETUP IN RAZORPAY DASHBOARD
+-----------------------------------
+1. Login to Razorpay Dashboard
+2. Go to Settings → Webhooks
+3. Click "Add New Webhook"
+4. Webhook URL: https://abc123.ngrok.io/api/webhook/razorpay/
+5. Secret: Generate a strong secret (save it!)
+6. Active Events:
+   ✅ payment.authorized
+   ✅ payment.captured
+   ✅ payment.failed
+7. Click "Create Webhook"
+
+STEP 8: UPDATE YOUR .ENV FILE
+-----------------------------
+Add this line to your .env file:
+RAZORPAY_WEBHOOK_SECRET=your_webhook_secret_from_step7
+
+═══════════════════════════════════════════════════════════
+
+🎯 QUICK COMMANDS SUMMARY:
+1. ngrok config add-authtoken YOUR_TOKEN
+2. ngrok http 8000
+3. Copy HTTPS URL + /api/webhook/razorpay/
+4. Enter in Razorpay Dashboard
+
+Your webhook is ready! 🚀

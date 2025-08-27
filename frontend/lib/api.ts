@@ -75,19 +75,19 @@ export const authAPI = {
   changePassword: (data: any) => api.post('/auth/change-password/', data),
 };
 
-// Invoice API (Supabase - Real-time)
+// Invoice API (Django - Standard)
 export const invoiceAPI = {
-  getInvoices: (params?: any) => api.get('/supabase/invoices/', { params }),
-  getInvoice: (id: string) => api.get(`/supabase/invoices/${id}/`),
-  createInvoice: (data: any) => api.post('/supabase/invoices/', data),
-  updateInvoice: (id: string, data: any) => api.put(`/supabase/invoices/${id}/`, data),
-  deleteInvoice: (id: string) => api.delete(`/supabase/invoices/${id}/`),
-  getSummary: () => api.get('/supabase/invoices/summary/'),
-  getRecent: () => api.get('/supabase/invoices/recent/'),
-  generatePaymentLink: (id: string) => api.post(`/supabase/invoices/${id}/payment-link/`),
-  downloadPDF: (id: string) => api.get(`/supabase/invoices/${id}/pdf/`, { responseType: 'blob' }),
+  getInvoices: (params?: any) => api.get('/invoices/', { params }),
+  getInvoice: (id: string) => api.get(`/invoices/${id}/`),
+  createInvoice: (data: any) => api.post('/invoices/', data),
+  updateInvoice: (id: string, data: any) => api.put(`/invoices/${id}/`, data),
+  deleteInvoice: (id: string) => api.delete(`/invoices/${id}/`),
+  getSummary: () => api.get('/invoices/summary/'),
+  getRecent: () => api.get('/invoices/recent/'),
+  generatePaymentLink: (id: string) => api.post(`/invoices/${id}/payment-link/`),
+  downloadPDF: (id: string) => api.get(`/invoices/${id}/download-pdf/`, { responseType: 'blob' }),
   sendReminder: (id: string, data?: any) => api.post(`/invoices/${id}/send-reminder/`, data),
-  markAsPaid: (id: string) => api.post(`/supabase/invoices/${id}/mark-paid/`),
+  markAsPaid: (id: string) => api.post(`/invoices/${id}/mark-paid/`),
 };
 
 export default api;

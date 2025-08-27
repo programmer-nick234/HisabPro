@@ -1,0 +1,28 @@
+{% extends "email/base_template.html" %}
+
+{% block email_title %}Payment Reminder - Invoice {{ invoice_number }}{% endblock %}
+
+{% block greeting %}Dear {{ client_name }},{% endblock %}
+
+{% block message_body %}
+<p>We hope this message finds you well.</p>
+
+<p>This is a professional reminder regarding invoice <strong>#{{ invoice_number }}</strong> in the amount of <strong>{{ amount }}</strong>, which was due on <strong>{{ due_date }}</strong>.</p>
+
+<p>As a valued client, we wanted to bring this to your attention and provide you with convenient options to complete your payment.</p>
+
+<p>If you have already processed this payment, we appreciate your promptness. If not, we kindly request that you arrange payment at your earliest convenience.</p>
+
+<p>Should you require any clarification regarding this invoice or wish to discuss payment terms, please contact our accounts team.</p>
+{% endblock %}
+
+{% block additional_content %}
+<div style="background: #fef3c7; border-left: 4px solid #d97706; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+    <h3 style="color: #92400e; margin-bottom: 10px;">📋 Invoice Summary:</h3>
+    <div style="color: #78350f;">
+        <p><strong>Services/Products:</strong> As detailed in attached invoice</p>
+        <p><strong>Payment Terms:</strong> Net 30 days</p>
+        <p><strong>Outstanding Balance:</strong> {{ amount }}</p>
+    </div>
+</div>
+{% endblock %}
