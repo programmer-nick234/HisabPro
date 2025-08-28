@@ -76,9 +76,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'hisabpro.wsgi.application'
 
 # Database
-# Use PostgreSQL in production, SQLite in development
-if config('DATABASE_URL', default=None):
-    # Production database (Railway PostgreSQL)
+# Use Supabase PostgreSQL in production, SQLite in development
+if config('SUPABASE_DB_URL', default=None):
+    # Production database (Supabase PostgreSQL)
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.parse(config('SUPABASE_DB_URL'))
+    }
+elif config('DATABASE_URL', default=None):
+    # Fallback for Railway PostgreSQL if needed
     import dj_database_url
     DATABASES = {
         'default': dj_database_url.parse(config('DATABASE_URL'))

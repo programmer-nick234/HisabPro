@@ -3,14 +3,37 @@
 ## **Overview**
 This guide will help you deploy your HisabPro application using 100% FREE hosting services:
 - **Frontend**: Vercel (Next.js)
-- **Backend**: Railway (Django + PostgreSQL)
-- **Database**: Railway PostgreSQL (included)
+- **Backend**: Railway (Django)
+- **Database**: Supabase PostgreSQL (FREE tier)
 - **Redis**: Railway Redis (included)
 
 ## **Prerequisites**
 - GitHub account
+- Supabase account (for database)
 - Razorpay account (for payments)
 - Gmail account (for email notifications)
+
+---
+
+## **PHASE 1: Set Up Supabase Database (15 minutes)**
+
+### **Step 1: Get Your Supabase Credentials**
+Since you're already using Supabase, you need to get these values from your Supabase dashboard:
+
+1. Go to [supabase.com](https://supabase.com) and login
+2. Select your project
+3. Go to **Settings** → **Database**
+4. Copy the **Connection string** (this is your `SUPABASE_DB_URL`)
+5. Go to **Settings** → **API**
+6. Copy **Project URL** (this is your `SUPABASE_URL`)
+7. Copy **anon public** key (this is your `SUPABASE_KEY`)
+
+### **Step 2: Verify Database Tables**
+Make sure your Supabase database has all the required tables for HisabPro:
+- `invoices`
+- `invoice_items`
+- `payments`
+- `user_profiles`
 
 ---
 
@@ -47,6 +70,11 @@ EMAIL_HOST_USER=your-gmail@gmail.com
 EMAIL_HOST_PASSWORD=your-app-password
 DEFAULT_FROM_EMAIL=your-gmail@gmail.com
 
+# Supabase Database
+SUPABASE_DB_URL=postgresql://postgres.your-project-id:your-password@aws-0-region.pooler.supabase.com:5432/postgres
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_KEY=your_supabase_anon_public_key
+
 # Razorpay Settings
 RAZORPAY_KEY_ID=your_razorpay_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
@@ -58,10 +86,10 @@ USE_WEASYPRINT_PDF=True
 USE_REPORTLAB_PDF=True
 ```
 
-### **Step 4: Add Database and Redis**
-1. In Railway dashboard, click "New" → "Database" → "PostgreSQL"
-2. Click "New" → "Database" → "Redis"
-3. Railway will automatically set `DATABASE_URL` and `REDIS_URL`
+### **Step 4: Add Redis (Optional)**
+1. In Railway dashboard, click "New" → "Database" → "Redis"
+2. Railway will automatically set `REDIS_URL`
+3. Your Supabase database is already configured separately
 
 ### **Step 5: Deploy**
 1. Railway will automatically deploy your backend
@@ -165,7 +193,7 @@ NEXT_PUBLIC_RAZORPAY_KEY_ID=your_razorpay_key_id
 |---------|-------------|--------------|
 | Railway | $5 credit/month | $0 |
 | Vercel | 100GB bandwidth | $0 |
-| PostgreSQL | 1GB (Railway) | $0 |
+| Supabase | 500MB database, 2GB bandwidth | $0 |
 | Redis | 25MB (Railway) | $0 |
 | **Total** | | **$0/month** |
 
